@@ -44,6 +44,7 @@ article blockquote{border-left:3px solid var(--acc);margin:14px 0;padding:4px 14
 #edSetup{max-width:520px;margin:26px auto;padding:24px;background:var(--panel);border:1px solid var(--border);border-radius:18px;line-height:1.6;font-size:14px}
 #edStatus{font-size:13px;color:var(--muted);padding:7px 14px;border-top:1px solid var(--border);min-height:32px}
 @media(max-width:700px){#edList{width:170px}}
+#syncInfo{font-size:11px;color:var(--muted);white-space:nowrap}
 #graphwrap{display:none;position:relative;flex:1;min-height:0;background:radial-gradient(900px 600px at 50% 38%,#17356e 0%,#0b1c3e 52%,#060d20 100%)}
 #cv{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
 .gbtns{position:absolute;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));display:flex;gap:8px}
@@ -61,11 +62,11 @@ header{flex-wrap:wrap}header b{font-size:15px}header input{order:5;flex:1 1 100%
 <button id="go">Buka Vault</button>
 <label class="rem"><input type="checkbox" id="rem"> Ingat di perangkat ini</label>
 <div class="err" id="err"></div></div></div>
-<div id="app"><header><b>🧠 Second Brain</b><input type="search" id="q" placeholder="Cari catatan…"><button class="tog on" id="tNote">📄 Catatan</button><button class="tog" id="tGraph">🕸️ Graf</button><button class="tog" id="tEdit">✏️ Editor</button><button id="menu">☰</button><button id="out">Kunci</button></header>
+<div id="app"><header><b>🧠 Second Brain</b><input type="search" id="q" placeholder="Cari catatan…"><button class="tog on" id="tNote">📄 Catatan</button><button class="tog" id="tGraph">🕸️ Graf</button><button class="tog" id="tEdit">✏️ Editor</button><button id="menu">☰</button><button id="out">Kunci</button><span id="syncInfo" title="Status sinkronisasi vault"></span></header>
 <main id="mainNote"><nav id="nav"></nav><article id="view"></article></main>
 <div id="editorwrap">
   <div id="edBar"><b>✏️ Editor Vault</b><span class="path" id="edPath">—</span>
-  <button id="edNew">+ Baru</button><button id="edPreview">Pratinjau</button><button id="edSave">💾 Simpan ke GitHub</button><button id="edReload">↻ Muat Ulang Daftar</button></div>
+  <button id="edNew">+ Baru</button><button id="edPreview">Pratinjau</button><button id="edSave">💾 Simpan ke GitHub</button><button id="edReload">↻ Muat Ulang Daftar</button><span id="edQ" style="font-size:12px;color:var(--acc2)"></span></div>
   <div id="edSetup" style="display:none">
     <h3 style="margin-top:0">Hubungkan GitHub (sekali saja)</h3>
     <p>Editor menyimpan catatan langsung ke repo privat <b>second-brain</b>. Buat token akses khusus di GitHub: <i>Settings → Developer settings → Personal access tokens → Fine-grained tokens</i> — Repository access: hanya <b>second-brain</b>, Permissions: <b>Contents: Read and write</b>. Tempel tokennya di sini (tersimpan hanya di perangkat ini):</p>
@@ -104,7 +105,7 @@ function show(data){
   NOTES=data.notes;GRAPH=data.graph;
   document.getElementById("lock").style.display="none";
   document.getElementById("app").style.display="flex";
-  renderNav("");openNote(NOTES[0].path);
+  renderNav("");openNote(NOTES[0].path);syncLive();flushQueue(true);
 }
 function renderNav(f){
   const nav=document.getElementById("nav");nav.innerHTML="";let grp="";
@@ -157,7 +158,7 @@ function setEditor(on){
   document.getElementById("tEdit").classList.toggle("on",on);
   document.getElementById("tNote").classList.toggle("on",!on);
   document.getElementById("tGraph").classList.toggle("on",false);
-  if(on){const has=!!edTok();document.getElementById("edSetup").style.display=has?"none":"block";document.getElementById("edMain").style.display=has?"flex":"none";if(has)edLoadList()}
+  if(on){const has=!!edTok();document.getElementById("edSetup").style.display=has?"none":"block";document.getElementById("edMain").style.display=has?"flex":"none";if(has){edLoadList();flushQueue(true)} }
 }
 document.getElementById("tEdit").onclick=()=>setEditor(true);
 document.getElementById("edConnect").onclick=()=>{const v=document.getElementById("edToken").value.trim();if(!v)return;localStorage.setItem("sbw_gh",v);setEditor(true);edMsg("Token tersimpan di perangkat ini.")};
@@ -189,8 +190,8 @@ document.getElementById("edSave").onclick=async()=>{
   try{
     const body={message:"Edit "+edCur.path+" via Second Brain App",content:b64enc(document.getElementById("edText").value),sha:edCur.sha,branch:"main"};
     const d=await ghApi("/contents/"+edCur.path.split("/").map(encodeURIComponent).join("/"),{method:"PUT",body:JSON.stringify(body)});
-    edCur.sha=d.content.sha;edMsg("✅ Tersimpan & ter-commit: "+edCur.path+" ("+d.commit.sha.slice(0,7)+"). Obsidian HP akan sinkron otomatis.");
-  }catch(e){edMsg("Gagal menyimpan: "+e.message+" — bila konflik, Muat Ulang lalu buka lagi catatannya.")}
+    edCur.sha=d.content.sha;edMsg("✅ Tersimpan & ter-commit: "+edCur.path+" ("+d.commit.sha.slice(0,7)+"). Obsidian HP akan sinkron otomatis.");flushQueue(true);syncLive();
+  }catch(e){if(e instanceof TypeError){queueEdit({path:edCur.path,content:document.getElementById("edText").value,sha:edCur.sha,ts:Date.now()});edMsg("📥 Kamu offline — perubahan masuk antrean & terkirim otomatis saat online.")}else{edMsg("Gagal menyimpan: "+e.message+" — bila konflik, Muat Ulang lalu buka lagi catatannya.")}}
 };
 document.getElementById("edNew").onclick=async()=>{
   const path=prompt("Path catatan baru (mis. Proyek/ide-baru.md):","Proyek/catatan-baru.md");
@@ -202,13 +203,98 @@ document.getElementById("edNew").onclick=async()=>{
     await edLoadList();edCur={path,sha:d.content.sha};
     document.getElementById("edText").value="# Judul\n\n";document.getElementById("edPath").textContent=path;
     edMsg("✅ Catatan baru dibuat: "+path);
-  }catch(e){edMsg("Gagal membuat: "+e.message+" — mungkin file sudah ada.")}
+  }catch(e){if(e instanceof TypeError){queueEdit({path:path,content:"# Judul\n\n",sha:null,ts:Date.now()});edMsg("📥 Kamu offline — catatan baru masuk antrean & dibuat saat online.")}else{edMsg("Gagal membuat: "+e.message+" — mungkin file sudah ada.")}}
 };
 document.getElementById("edPreview").onclick=()=>{
   if(typeof marked==="undefined"){edMsg("Pustaka pratinjau belum termuat.");return}
   setEditor(false);
   const v=document.getElementById("view");v.innerHTML=marked.parse(document.getElementById("edText").value);v.scrollTop=0;
 };
+
+
+/* ===== v1.2: live sync (reading view) + offline edit queue ===== */
+function mdToNotes(files){
+  const byStem={};
+  for(const f of files){byStem[f.path.split("/").pop().replace(/\.md$/,"").toLowerCase()]=f.path;byStem[f.path.replace(/\.md$/,"").toLowerCase()]=f.path}
+  const edges=new Set(),notes=[],linkRe=/\[\[([^\]]+)\]\]/g;
+  for(const f of files){
+    let m;const re=/\[\[([^\]]+)\]\]/g;
+    while((m=re.exec(f.text))){const t=m[1].split("|")[0].split("#")[0].trim();const dest=byStem[t.toLowerCase()]||byStem[t.split("/").pop().toLowerCase()];if(dest&&dest!==f.path)edges.add(f.path+"|"+dest)}
+    const text2=f.text.replace(linkRe,mm=>{const inner=mm.slice(2,-2);const t=inner.split("|")[0].split("#")[0].trim();const dest=byStem[t.toLowerCase()]||byStem[t.split("/").pop().toLowerCase()];const label=inner.split("|").pop().trim();return dest?'<a href="#" data-note="'+dest+'">'+label+'</a>':label});
+    const tm=f.text.match(/^#\s+(.+)$/m);
+    notes.push({path:f.path,title:tm?tm[1].trim():f.path.split("/").pop().replace(/\.md$/,"").replace(/-/g," "),html:marked.parse(text2)});
+  }
+  notes.sort((a,b)=>((a.path!=="00-Beranda.md")-(b.path!=="00-Beranda.md"))||a.path.localeCompare(b.path));
+  const folders={};
+  for(const n of notes)if(n.path.includes("/"))(folders[n.path.split("/")[0]]=folders[n.path.split("/")[0]]||[]).push(n);
+  for(const folder of Object.keys(folders).sort()){
+    const hub="__hub__/"+folder,kids=folders[folder];
+    notes.push({path:hub,title:folder,html:"<h1>"+folder+"</h1><ul>"+kids.map(k=>'<li><a href="#" data-note="'+k.path+'">'+k.title+'</a></li>').join("")+"</ul>",hub:true});
+    edges.add("00-Beranda.md|"+hub);for(const k of kids)edges.add(hub+"|"+k.path);
+  }
+  for(const k of folders["Proyek"]||[])edges.add("Memori/MEMORY.md|"+k.path);
+  return {notes:notes,graph:{edges:[...edges].map(e=>e.split("|"))}};
+}
+function applyData(data){
+  const act=document.querySelector("nav a.act");const cur=act?act.dataset.path:null;
+  NOTES=data.notes;GRAPH=data.graph;G=null;
+  renderNav(document.getElementById("q").value.toLowerCase());
+  const edOpen=document.getElementById("editorwrap").style.display==="flex";
+  if(!edOpen)openNote(cur&&NOTES.some(n=>n.path===cur)?cur:NOTES[0].path);
+}
+function setSync(txt,color){const el=document.getElementById("syncInfo");if(el){el.textContent=txt;el.style.color=color||""}}
+async function syncLive(){
+  if(!edTok()){setSync("● Potret offline","#8fa3c8");return}
+  if(typeof marked==="undefined")return;
+  setSync("● Menyinkron…","#ffd24d");
+  try{
+    const tree=await ghApi("/git/trees/main?recursive=1");
+    let cache=null;try{cache=JSON.parse(localStorage.getItem("sbw_cache")||"null")}catch(e){}
+    const files=tree.tree.filter(x=>x.type==="blob"&&edScope(x.path));
+    if(cache&&cache.tree===tree.sha&&cache.data){applyData(cache.data);setSync("● Live ✓","#5ee08a");return}
+    const shas={};files.forEach(f=>shas[f.path]=f.sha);
+    const old=(cache&&cache.shas)||{},rawByPath={};
+    if(cache&&cache.raw)for(const n of cache.raw)rawByPath[n.path]=n;
+    for(const f of files){
+      if(old[f.path]===f.sha&&rawByPath[f.path])continue;
+      const d=await ghApi("/contents/"+f.path.split("/").map(encodeURIComponent).join("/")+"?ref=main");
+      rawByPath[f.path]={path:f.path,text:b64dec(d.content)};
+    }
+    const raw=files.map(f=>rawByPath[f.path]).filter(Boolean);
+    const data=mdToNotes(raw);
+    try{localStorage.setItem("sbw_cache",JSON.stringify({tree:tree.sha,shas:shas,raw:raw,data:data}))}catch(e){}
+    applyData(data);setSync("● Live ✓","#5ee08a");
+  }catch(e){setSync("● Potret (gagal sinkron)","#8fa3c8")}
+}
+function getQueue(){try{return JSON.parse(localStorage.getItem("sbw_queue")||"[]")}catch(e){return[]}}
+function setQueue(q){try{localStorage.setItem("sbw_queue",JSON.stringify(q))}catch(e){}const el=document.getElementById("edQ");if(el)el.textContent=q.length?("📥 Antrean offline: "+q.length):""}
+function queueEdit(item){setQueue(getQueue().filter(x=>x.path!==item.path).concat([item]))}
+async function flushQueue(silent){
+  setQueue(getQueue());
+  const q=getQueue();if(!q.length||!edTok())return;
+  let done=0,conf=0;
+  for(const item of [...q]){
+    try{
+      let sha=item.sha;
+      if(item.sha){
+        const cur=await ghApi("/contents/"+item.path.split("/").map(encodeURIComponent).join("/")+"?ref=main");
+        if(cur.sha!==item.sha){
+          const cp=item.path.replace(/\.md$/,"")+" (konflik "+new Date(item.ts).toISOString().slice(0,16).replace("T"," ")+").md";
+          await ghApi("/contents/"+cp.split("/").map(encodeURIComponent).join("/"),{method:"PUT",body:JSON.stringify({message:"Conflict copy via Second Brain App (offline queue)",content:b64enc(item.content),branch:"main"})});
+          conf++;setQueue(getQueue().filter(x=>x.path!==item.path));continue;
+        }
+        sha=cur.sha;
+      }
+      const body={message:(item.sha?"Edit ":"Create ")+item.path+" via Second Brain App (offline queue)",content:b64enc(item.content),branch:"main"};
+      if(sha)body.sha=sha;
+      await ghApi("/contents/"+item.path.split("/").map(encodeURIComponent).join("/"),{method:"PUT",body:JSON.stringify(body)});
+      if(edCur&&edCur.path===item.path){try{const d=await ghApi("/contents/"+item.path.split("/").map(encodeURIComponent).join("/")+"?ref=main");edCur.sha=d.sha}catch(e){}}
+      setQueue(getQueue().filter(x=>x.path!==item.path));done++;
+    }catch(e){/* still offline / error: keep queued */}
+  }
+  if(done||conf){if(!silent)edMsg("📤 Antrean terkirim: "+done+" catatan"+(conf?(", "+conf+" jadi salinan konflik"):"")+".");syncLive()}
+}
+window.addEventListener("online",()=>{flushQueue();syncLive()});
 
 /* ===== Graph view: force-directed brain network ===== */
 if(!CanvasRenderingContext2D.prototype.roundRect){CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){r=Math.min(r,w/2,h/2);this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);this.closePath();return this}}
