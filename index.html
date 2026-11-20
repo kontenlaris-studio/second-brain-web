@@ -45,6 +45,7 @@ article blockquote{border-left:3px solid var(--acc);margin:14px 0;padding:4px 14
 #edStatus{font-size:13px;color:var(--muted);padding:7px 14px;border-top:1px solid var(--border);min-height:32px}
 @media(max-width:700px){#edList{width:170px}}
 .ovl{position:fixed;inset:0;background:rgba(3,8,20,.72);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px}.ovl .card{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:20px;max-width:520px;width:100%;max-height:88dvh;overflow:auto}.ovl h3,.ovl h4{margin:4px 0 10px}.ovl input,.ovl select,.ovl textarea{width:100%;margin:6px 0 12px}.ovl label{font-size:13px;color:var(--muted)}.ovl hr{border-color:var(--border);margin:14px 0}.ovl .hint{font-size:12px;color:var(--muted);line-height:1.5}#setPanel .card{display:flex;flex-direction:column;overflow:hidden}#setPanel .cardbody{overflow:auto;min-height:0}#setPanel .cardfoot{border-top:1px solid var(--border);padding-top:12px;margin-top:12px;display:grid;gap:10px}.aiout{background:rgba(7,15,34,.6);border:1px solid var(--border);border-radius:12px;padding:12px;min-height:60px;margin-bottom:10px;font-size:14px;line-height:1.6}#aiFab{position:fixed;right:14px;bottom:calc(92px + env(safe-area-inset-bottom,0px));z-index:40;width:54px;height:54px;border-radius:50%;font-size:24px;padding:0;display:none}
+.notemeta{margin-top:30px;border-top:1px solid var(--border);padding-top:14px;font-size:13px;color:var(--muted);line-height:1.7}.tagrow{margin-bottom:8px}.tag{background:rgba(255,122,0,.13);border:1px solid rgba(255,122,0,.45);color:#ffb066;border-radius:999px;padding:3px 11px;font-size:12px;margin:0 6px 6px 0;box-shadow:none;cursor:pointer}.blrow a{color:#7cc4ff}
 #syncInfo{font-size:11px;color:var(--muted);white-space:nowrap}
 #graphwrap{display:none;position:relative;flex:1;min-height:0;background:radial-gradient(900px 600px at 50% 38%,#17356e 0%,#0b1c3e 52%,#060d20 100%)}
 #cv{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
@@ -67,7 +68,7 @@ header{flex-wrap:wrap}header b{font-size:15px}header input{order:5;flex:1 1 100%
 <main id="mainNote"><nav id="nav"></nav><article id="view"></article></main>
 <div id="editorwrap">
   <div id="edBar"><b>✏️ Editor Vault</b><span class="path" id="edPath">—</span>
-  <button id="edNew">+ Baru</button><button id="edPreview">Pratinjau</button><button id="edSave">💾 Simpan ke GitHub</button><button id="edReload">↻ Muat Ulang Daftar</button><span id="edQ" style="font-size:12px;color:var(--acc2)"></span></div>
+  <button id="edNew">+ Baru</button><button id="edPreview">Pratinjau</button><button id="edSave">💾 Simpan ke GitHub</button><button id="edRename">✏️ Ganti Nama</button><button id="edDelete" style="background:linear-gradient(135deg,#e0483e,#a5271f)">🗑 Hapus</button><button id="edReload">↻ Muat Ulang Daftar</button><span id="edQ" style="font-size:12px;color:var(--acc2)"></span></div>
   <div id="edSetup" style="display:none">
     <h3 style="margin-top:0">Hubungkan GitHub (sekali saja)</h3>
     <p>Editor menyimpan catatan langsung ke repo privat <b>second-brain</b>. Buat token akses khusus di GitHub: <i>Settings → Developer settings → Personal access tokens → Fine-grained tokens</i> — Repository access: hanya <b>second-brain</b>, Permissions: <b>Contents: Read and write</b>. Tempel tokennya di sini (tersimpan hanya di perangkat ini):</p>
@@ -145,7 +146,7 @@ function renderNav(f){
   const nav=document.getElementById("nav");nav.innerHTML="";let grp="";
   for(const n of NOTES){
     if(n.hub)continue;
-    if(f && !(n.title+" "+n.path).toLowerCase().includes(f))continue;
+    if(f && !(n.title+" "+n.path+" "+noteTags(n).join(" ")).toLowerCase().includes(f.replace(/^#/,"")))continue;
     const g=n.path.includes("/")?n.path.split("/")[0]:"Catatan";
     if(g!==grp){grp=g;const d=document.createElement("div");d.className="grp";d.textContent=g;nav.appendChild(d);}
     const a=document.createElement("a");a.href="#";a.textContent=n.title;a.dataset.path=n.path;
@@ -158,6 +159,15 @@ function openNote(path){
   const v=document.getElementById("view");v.innerHTML=n.html;v.scrollTop=0;
   document.querySelectorAll("nav a").forEach(a=>a.classList.toggle("act",a.dataset.path===path));
   v.querySelectorAll("a[data-note]").forEach(a=>a.onclick=e=>{e.preventDefault();openNote(a.dataset.note)});
+  const tags=noteTags(n),bl=backlinks(path);
+  if(tags.length||bl.length){
+    const meta=document.createElement("div");meta.className="notemeta";let h="";
+    if(tags.length)h+='<div class="tagrow">'+tags.map(t=>'<button class="tag" data-tag="'+t+'">#'+t+'</button>').join("")+'</div>';
+    if(bl.length)h+='<div class="blrow">🔗 <b>Ditautkan dari:</b> '+bl.map(p=>{const o=NOTES.find(x=>x.path===p);return '<a href="#" data-note="'+p+'">'+(o?o.title:p)+'</a>'}).join(" · ")+'</div>';
+    meta.innerHTML=h;v.appendChild(meta);
+    meta.querySelectorAll("a[data-note]").forEach(a=>a.onclick=e=>{e.preventDefault();openNote(a.dataset.note)});
+    meta.querySelectorAll(".tag").forEach(b=>b.onclick=()=>{const q=document.getElementById("q");q.value="#"+b.dataset.tag;q.dispatchEvent(new Event("input"));document.getElementById("nav").classList.add("open")});
+  }
 }
 async function tryGo(){
   const pw=document.getElementById("pw").value,err=document.getElementById("err");err.textContent="";
@@ -372,6 +382,36 @@ document.getElementById("aiFab").onclick=()=>{const n=NOTES.find(x=>x.path===win
 document.getElementById("aiClose").onclick=()=>document.getElementById("aiPanel").style.display="none";
 document.getElementById("aiAsk").onclick=()=>{const q=document.getElementById("aiQ").value.trim();if(q)aiCall("Konteks — catatan yang sedang terbuka di aplikasi:\n"+curNoteText()+"\n\nPertanyaan pengguna: "+q)};
 document.getElementById("aiSum").onclick=()=>aiCall("Ringkas catatan berikut menjadi poin-poin penting:\n"+curNoteText());
+
+
+/* ===== v1.4: tags, backlinks, editor rename/delete ===== */
+function noteTags(n){const d=document.createElement("div");d.innerHTML=n.html;const m=(d.textContent||"").match(/(?:^|\s)#([\p{L}\p{N}_][\p{L}\p{N}_-]*)/gu)||[];return [...new Set(m.map(x=>x.trim().slice(1).toLowerCase()))]}
+function outLinks(n){const m=n.html.match(/data-note="[^"]+"/g)||[];return [...new Set(m.map(x=>x.slice(11,-1)))]}
+function backlinks(p){return NOTES.filter(n=>n.path!==p&&!n.hub&&outLinks(n).includes(p)).map(n=>n.path)}
+document.getElementById("edRename").onclick=async()=>{
+  if(!edCur){edMsg("Belum ada catatan terbuka.");return}
+  const np=prompt("Path baru (ganti nama / pindah folder):",edCur.path);
+  if(!np||np===edCur.path)return;
+  if(!edScope(np)){edMsg("Path baru di luar cakupan editor / bukan .md");return}
+  edMsg("Mengganti nama ke "+np+" …");
+  try{
+    const content=document.getElementById("edText").value;
+    const d=await ghApi("/contents/"+np.split("/").map(encodeURIComponent).join("/"),{method:"PUT",body:JSON.stringify({message:"Rename "+edCur.path+" -> "+np+" via Second Brain App",content:b64enc(content),branch:"main"})});
+    await ghApi("/contents/"+edCur.path.split("/").map(encodeURIComponent).join("/"),{method:"DELETE",body:JSON.stringify({message:"Rename: hapus path lama "+edCur.path,sha:edCur.sha,branch:"main"})});
+    edCur={path:np,sha:d.content.sha};document.getElementById("edPath").textContent=np;
+    await edLoadList();edMsg("✅ Nama diganti: "+np);syncLive();
+  }catch(e){edMsg("Gagal ganti nama: "+e.message)}
+};
+document.getElementById("edDelete").onclick=async()=>{
+  if(!edCur){edMsg("Belum ada catatan terbuka.");return}
+  if(!confirm("Hapus permanen catatan ini dari vault?\n"+edCur.path))return;
+  edMsg("Menghapus "+edCur.path+" …");
+  try{
+    await ghApi("/contents/"+edCur.path.split("/").map(encodeURIComponent).join("/"),{method:"DELETE",body:JSON.stringify({message:"Delete "+edCur.path+" via Second Brain App",sha:edCur.sha,branch:"main"})});
+    edCur=null;document.getElementById("edText").value="";document.getElementById("edPath").textContent="—";
+    await edLoadList();edMsg("🗑 Catatan dihapus dari vault.");syncLive();
+  }catch(e){edMsg("Gagal menghapus: "+e.message)}
+};
 
 /* ===== Graph view: force-directed brain network ===== */
 if(!CanvasRenderingContext2D.prototype.roundRect){CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){r=Math.min(r,w/2,h/2);this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);this.closePath();return this}}
