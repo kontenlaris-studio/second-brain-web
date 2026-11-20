@@ -46,6 +46,7 @@ article blockquote{border-left:3px solid var(--acc);margin:14px 0;padding:4px 14
 @media(max-width:700px){#edList{width:170px}}
 .ovl{position:fixed;inset:0;background:rgba(3,8,20,.72);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px}.ovl .card{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:20px;max-width:520px;width:100%;max-height:88dvh;overflow:auto}.ovl h3,.ovl h4{margin:4px 0 10px}.ovl input,.ovl select,.ovl textarea{width:100%;margin:6px 0 12px}.ovl label{font-size:13px;color:var(--muted)}.ovl hr{border-color:var(--border);margin:14px 0}.ovl .hint{font-size:12px;color:var(--muted);line-height:1.5}#setPanel .card{display:flex;flex-direction:column;overflow:hidden}#setPanel .cardbody{overflow:auto;min-height:0}#setPanel .cardfoot{border-top:1px solid var(--border);padding-top:12px;margin-top:12px;display:grid;gap:10px}.aiout{background:rgba(7,15,34,.6);border:1px solid var(--border);border-radius:12px;padding:12px;min-height:60px;margin-bottom:10px;font-size:14px;line-height:1.6}#aiFab{position:fixed;right:14px;bottom:calc(92px + env(safe-area-inset-bottom,0px));z-index:40;width:54px;height:54px;border-radius:50%;font-size:24px;padding:0;display:none}
 .notemeta{margin-top:30px;border-top:1px solid var(--border);padding-top:14px;font-size:13px;color:var(--muted);line-height:1.7}.tagrow{margin-bottom:8px}.tag{background:rgba(255,122,0,.13);border:1px solid rgba(255,122,0,.45);color:#ffb066;border-radius:999px;padding:3px 11px;font-size:12px;margin:0 6px 6px 0;box-shadow:none;cursor:pointer}.blrow a{color:#7cc4ff}
+.ovl .card{background:#0b1a33}#gitPanel .card{display:flex;flex-direction:column;overflow:hidden}#gitPanel .cardbody{overflow:auto;min-height:0}#gitPanel .cardfoot{border-top:1px solid var(--border);padding-top:12px;margin-top:12px;display:grid}
 #syncInfo{font-size:11px;color:var(--muted);white-space:nowrap}
 #graphwrap{display:none;position:relative;flex:1;min-height:0;background:radial-gradient(900px 600px at 50% 38%,#17356e 0%,#0b1c3e 52%,#060d20 100%)}
 #cv{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
@@ -125,6 +126,7 @@ header{flex-wrap:wrap}header b{font-size:15px}header input{order:5;flex:1 1 100%
 </div></div>
 
 <div id="gitPanel" class="ovl" style="display:none"><div class="card">
+<div class="cardbody">
 <h3>🌿 Git — second-brain</h3>
 <p class="hint" id="gitStat">Memuat status…</p>
 <button id="gitPull">⬇️ Pull / Sinkron Sekarang</button>
@@ -133,7 +135,7 @@ header{flex-wrap:wrap}header b{font-size:15px}header input{order:5;flex:1 1 100%
 <div id="gitDiff" class="aiout">—</div>
 <h4>Riwayat commit</h4>
 <div id="gitLog" class="aiout">Memuat…</div>
-<button id="gitClose">Tutup</button>
+</div><div class="cardfoot"><button id="gitClose" style="background:transparent;border:1px solid var(--border);color:var(--text);box-shadow:none">Tutup</button></div>
 </div></div>
 <div id="aiPanel" class="ovl" style="display:none"><div class="card">
 <h3>🤖 Tanya AI — <span id="aiCtx">—</span></h3>
@@ -318,7 +320,7 @@ async function syncLive(){
     const tree=await ghApi("/git/trees/main?recursive=1");
     let cache=null;try{cache=JSON.parse(localStorage.getItem("sbw_cache")||"null")}catch(e){}
     const files=tree.tree.filter(x=>x.type==="blob"&&edScope(x.path));
-    if(cache&&cache.tree===tree.sha&&cache.data){applyData(cache.data);setSync("● Live ✓","#5ee08a");return}
+    if(cache&&cache.tree===tree.sha&&cache.data){window._lastDiff={added:[],modified:[],deleted:[]};applyData(cache.data);setSync("● Live ✓","#5ee08a");return}
     const shas={};files.forEach(f=>shas[f.path]=f.sha);
     const old=(cache&&cache.shas)||{},rawByPath={};
     window._lastDiff={added:files.filter(f=>!old[f.path]).map(f=>f.path),modified:files.filter(f=>old[f.path]&&old[f.path]!==f.sha).map(f=>f.path),deleted:Object.keys(old).filter(p=>!shas[p])};
