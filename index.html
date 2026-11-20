@@ -184,8 +184,7 @@ function show(data){
 function renderNav(f){
   const nav=document.getElementById("nav");nav.innerHTML="";let grp="";
   if(!f){const sect=(label,arr)=>{if(!arr.length)return;const d=document.createElement("div");d.className="grp";d.textContent=label;nav.appendChild(d);for(const n of arr){const a=document.createElement("a");a.href="#";a.textContent=n.title;a.dataset.path=n.path;a.onclick=e=>{e.preventDefault();openNote(n.path);nav.classList.remove("open")};nav.appendChild(a)}};
-    sect("⭐ Favorit",getFav().map(p=>NOTES.find(n=>n.path===p)).filter(Boolean));
-    try{sect("🕒 Terakhir Dibuka",JSON.parse(localStorage.getItem("sbw_recent")||"[]").map(p=>NOTES.find(n=>n.path===p)).filter(Boolean))}catch(e){}}
+    sect("⭐ Favorit",getFav().map(p=>NOTES.find(n=>n.path===p)).filter(Boolean));}
   for(const n of NOTES){
     if(n.hub)continue;
     if(f && !(n.title+" "+n.path).toLowerCase().includes(f))continue;
@@ -198,7 +197,6 @@ function renderNav(f){
 function openNote(path){
   const n=NOTES.find(x=>x.path===path);if(!n)return;
   window._curPath=path;setView(false);
-  try{let r=JSON.parse(localStorage.getItem("sbw_recent")||"[]");r=[path,...r.filter(p=>p!==path)].slice(0,5);localStorage.setItem("sbw_recent",JSON.stringify(r))}catch(e){}
   const v=document.getElementById("view");v.innerHTML=n.html;v.scrollTop=0;
   document.querySelectorAll("nav a").forEach(a=>a.classList.toggle("act",a.dataset.path===path));
   v.querySelectorAll("a[data-note]").forEach(a=>a.onclick=e=>{e.preventDefault();openNote(a.dataset.note)});
@@ -588,7 +586,7 @@ document.getElementById("gitPull").onclick=e=>gitBusy(e.currentTarget,async()=>{
 document.getElementById("gitPush").onclick=e=>gitBusy(e.currentTarget,async()=>{await flushQueue(false);await syncLive()});
 
 
-/* ===== v2.0: Obsidian core pack — favorites, recents, palette, local graph, daily note ===== */
+/* ===== v2.0: Obsidian core pack — favorites, palette, local graph, daily note ===== */
 const getFav=()=>{try{return JSON.parse(localStorage.getItem("sbw_fav")||"[]")}catch(e){return[]}};
 function toggleFav(p){let f=getFav();f=f.includes(p)?f.filter(x=>x!==p):[...f,p];localStorage.setItem("sbw_fav",JSON.stringify(f));renderNav(document.getElementById("q").value.toLowerCase())}
 function openLocalGraph(path){
