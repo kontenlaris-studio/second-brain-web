@@ -65,7 +65,7 @@ header{flex-wrap:wrap}header b{font-size:15px}header input{order:5;flex:1 1 100%
 <button id="bioBtn" style="display:none">🔓 Masuk dengan Sidik Jari</button>
 <label class="rem"><input type="checkbox" id="rem"> Ingat di perangkat ini</label>
 <div class="err" id="err"></div></div></div>
-<div id="app"><header><b>🧠 Second Brain</b><input type="search" id="q" placeholder="Cari catatan…"><button class="tog on" id="tNote">📄 Catatan</button><button class="tog" id="tGraph">🕸️ Graf</button><button class="tog" id="tEdit">✏️ Editor</button><button id="tSet">⚙️</button><button id="menu">☰</button><button id="out">Kunci</button><span id="syncInfo" title="Status sinkronisasi vault"></span></header>
+<div id="app"><header><b>🧠 Second Brain</b><input type="search" id="q" placeholder="Cari catatan…"><button class="tog on" id="tNote">📄 Catatan</button><button class="tog" id="tGraph">🕸️ Graf</button><button class="tog" id="tEdit">✏️ Editor</button><button id="tSet">⚙️</button><button id="tGit">🌿</button><button id="menu">☰</button><button id="out">Kunci</button><span id="syncInfo" title="Status sinkronisasi vault"></span></header>
 <main id="mainNote"><nav id="nav"></nav><article id="view"></article></main>
 <div id="editorwrap">
   <div id="edBar"><b>✏️ Editor Vault</b><span class="path" id="edPath">—</span>
@@ -122,6 +122,18 @@ header{flex-wrap:wrap}header b{font-size:15px}header input{order:5;flex:1 1 100%
 <button id="exitBtn" style="background:linear-gradient(135deg,#e0483e,#a5271f);box-shadow:0 6px 18px rgba(200,50,40,.35)">⏻ Keluar dari Aplikasi</button>
 <button id="setClose" style="background:transparent;border:1px solid var(--border);color:var(--text);box-shadow:none">Tutup</button>
 </div>
+</div></div>
+
+<div id="gitPanel" class="ovl" style="display:none"><div class="card">
+<h3>🌿 Git — second-brain</h3>
+<p class="hint" id="gitStat">Memuat status…</p>
+<button id="gitPull">⬇️ Pull / Sinkron Sekarang</button>
+<button id="gitPush">⬆️ Kirim Antrean Edit (Push)</button>
+<h4>Perubahan pada sinkron terakhir</h4>
+<div id="gitDiff" class="aiout">—</div>
+<h4>Riwayat commit</h4>
+<div id="gitLog" class="aiout">Memuat…</div>
+<button id="gitClose">Tutup</button>
 </div></div>
 <div id="aiPanel" class="ovl" style="display:none"><div class="card">
 <h3>🤖 Tanya AI — <span id="aiCtx">—</span></h3>
@@ -309,6 +321,7 @@ async function syncLive(){
     if(cache&&cache.tree===tree.sha&&cache.data){applyData(cache.data);setSync("● Live ✓","#5ee08a");return}
     const shas={};files.forEach(f=>shas[f.path]=f.sha);
     const old=(cache&&cache.shas)||{},rawByPath={};
+    window._lastDiff={added:files.filter(f=>!old[f.path]).map(f=>f.path),modified:files.filter(f=>old[f.path]&&old[f.path]!==f.sha).map(f=>f.path),deleted:Object.keys(old).filter(p=>!shas[p])};
     if(cache&&cache.raw)for(const n of cache.raw)rawByPath[n.path]=n;
     for(const f of files){
       if(old[f.path]===f.sha&&rawByPath[f.path])continue;
@@ -518,6 +531,26 @@ document.getElementById("recZipBtn").onclick=()=>{
   a.download="second-brain-vault-"+now.toISOString().slice(0,10)+".zip";
   a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
 };
+
+
+/* ===== v1.9: Git panel (Obsidian-Git style) ===== */
+async function openGit(){
+  document.getElementById("gitPanel").style.display="flex";
+  document.getElementById("gitStat").textContent="Repo: kontenlaris-studio/second-brain · branch: main · token GitHub: "+(edTok()?"terhubung ✓":"BELUM — isi sekali di tab Editor");
+  const d=window._lastDiff,el=document.getElementById("gitDiff");
+  el.innerHTML=d?(((d.added.length?"<b>Baru:</b> "+d.added.join(", ")+"<br>":"")+(d.modified.length?"<b>Berubah:</b> "+d.modified.join(", ")+"<br>":"")+(d.deleted.length?"<b>Terhapus:</b> "+d.deleted.join(", "):""))||"Tidak ada perubahan."):  "Belum ada sinkron pada sesi ini — ketuk Pull.";
+  const log=document.getElementById("gitLog");
+  if(!edTok()){log.textContent="Riwayat commit butuh token GitHub (isi sekali di tab Editor).";return}
+  log.textContent="Memuat…";
+  try{
+    const cs=await ghApi("/commits?per_page=10");
+    log.innerHTML=cs.map(c=>'<div style="margin-bottom:7px"><code>'+c.sha.slice(0,7)+'</code> '+c.commit.message.split("\n")[0]+'<br><span style="color:var(--muted);font-size:12px">'+new Date(c.commit.author.date).toLocaleString("id-ID")+" · "+c.commit.author.name+'</span></div>').join("");
+  }catch(e){log.textContent="Gagal memuat riwayat: "+e.message}
+}
+document.getElementById("tGit").onclick=openGit;
+document.getElementById("gitClose").onclick=()=>document.getElementById("gitPanel").style.display="none";
+document.getElementById("gitPull").onclick=async()=>{await syncLive();openGit()};
+document.getElementById("gitPush").onclick=async()=>{await flushQueue(false);await syncLive();openGit()};
 
 /* ===== Graph view: force-directed brain network ===== */
 if(!CanvasRenderingContext2D.prototype.roundRect){CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){r=Math.min(r,w/2,h/2);this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);this.closePath();return this}}
