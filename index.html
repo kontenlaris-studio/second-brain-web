@@ -411,7 +411,7 @@ document.getElementById("setClose").onclick=()=>document.getElementById("setPane
 document.getElementById("aiProv").onchange=e=>{document.getElementById("aiBase").style.display=e.target.value==="custom"?"block":"none"};
 document.getElementById("setSave").onclick=()=>{const s=SET();s.syncMin=Math.max(0,parseInt(document.getElementById("setSyncMin").value||"0",10)|0);saveSET(s);document.getElementById("setPanel").style.display="none";if(s.syncMin)syncLive()};
 document.getElementById("aiSave").onclick=()=>{const s=SET();const sel=document.getElementById("aiProv").value;s.aiBase=sel==="custom"?document.getElementById("aiBase").value.trim():sel;s.aiKey=document.getElementById("aiKey").value.trim();s.aiModel=document.getElementById("aiModel").value.trim();saveSET(s);document.getElementById("setPanel").style.display="none"};
-document.getElementById("exitBtn").onclick=()=>{try{if(window.Capacitor&&Capacitor.Plugins&&Capacitor.Plugins.App){Capacitor.Plugins.App.exitApp();return}}catch(e){}document.getElementById("setPanel").style.display="none"};
+document.getElementById("exitBtn").onclick=()=>{document.getElementById("setPanel").style.display="none"};
 function curNoteText(){const n=NOTES.find(x=>x.path===window._curPath);if(!n)return"";const d=document.createElement("div");d.innerHTML=n.html;return (d.textContent||"").slice(0,6000)}
 async function aiCall(userText){
   const s=SET(),out=document.getElementById("aiOut");
@@ -726,7 +726,6 @@ async function recSave(kind){
     name="second-brain-vault-"+ds+".zip";
   }
   st.textContent="⏳ Menyiapkan file…";
-  try{if(await recSaveNative(blob,name)){st.textContent="✓ File dibuat langsung di aplikasi: "+name+" — bila menu bagikan tidak muncul, file tersimpan di cache aplikasi.";return}}catch(e){}
   if(edTok()){
     st.textContent="⏳ Menyimpan ke repo…";
     try{
@@ -743,18 +742,6 @@ async function recSave(kind){
 document.getElementById("recBtn").onclick=()=>recSave("md");
 document.getElementById("recZipBtn").onclick=()=>recSave("zip");
 
-
-/* ===== v2.4: native in-app download via Capacitor Filesystem + Share ===== */
-async function recSaveNative(blob,name){
-  const CP=window.Capacitor;
-  if(!CP||!CP.isNativePlatform||!CP.isNativePlatform())return false;
-  const FS=CP.Plugins&&CP.Plugins.Filesystem,SH=CP.Plugins&&CP.Plugins.Share;
-  if(!FS)return false;
-  const b64=await blobB64(blob);
-  const w=await FS.writeFile({path:name,data:b64,directory:"CACHE"});
-  if(SH){try{await SH.share({title:name,url:w.uri,dialogTitle:"Simpan / bagikan file"})}catch(e){}}
-  return true;
-}
 
 /* ===== Graph view: force-directed brain network ===== */
 if(!CanvasRenderingContext2D.prototype.roundRect){CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){r=Math.min(r,w/2,h/2);this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);this.closePath();return this}}
