@@ -47,6 +47,7 @@ article blockquote{border-left:3px solid var(--acc);margin:14px 0;padding:4px 14
 .ovl{position:fixed;inset:0;background:rgba(3,8,20,.72);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px}.ovl .card{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:20px;max-width:520px;width:100%;max-height:88dvh;overflow:auto}.ovl h3,.ovl h4{margin:4px 0 10px}.ovl input,.ovl select,.ovl textarea{width:100%;margin:6px 0 12px}.ovl label{font-size:13px;color:var(--muted)}.ovl hr{border-color:var(--border);margin:14px 0}.ovl .hint{font-size:12px;color:var(--muted);line-height:1.5}#setPanel .card{display:flex;flex-direction:column;overflow:hidden}#setPanel .cardbody{overflow:auto;min-height:0}#setPanel .cardfoot{border-top:1px solid var(--border);padding-top:12px;margin-top:12px;display:grid;gap:10px}.aiout{background:rgba(7,15,34,.6);border:1px solid var(--border);border-radius:12px;padding:12px;min-height:60px;margin-bottom:10px;font-size:14px;line-height:1.6}#aiFab{position:fixed;right:14px;bottom:calc(92px + env(safe-area-inset-bottom,0px));z-index:40;width:54px;height:54px;border-radius:50%;font-size:24px;padding:0;display:none}
 .notemeta{margin-top:30px;border-top:1px solid var(--border);padding-top:14px;font-size:13px;color:var(--muted);line-height:1.7}.tagrow{margin-bottom:8px}.tag{background:rgba(255,122,0,.13);border:1px solid rgba(255,122,0,.45);color:#ffb066;border-radius:999px;padding:3px 11px;font-size:12px;margin:0 6px 6px 0;box-shadow:none;cursor:pointer}.blrow a{color:#7cc4ff}
 .ovl .card{background:#0b1a33}#gitPanel .card{display:flex;flex-direction:column;overflow:hidden}#gitPanel .cardbody{overflow:auto;min-height:0}#gitPanel .cardfoot{border-top:1px solid var(--border);padding-top:12px;margin-top:12px;display:grid}
+.outline{background:rgba(20,40,80,.55);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:14px}.outline summary{cursor:pointer;font-weight:600}.outline a{display:block;color:var(--muted);text-decoration:none;padding:3px 0;font-size:14px}.statrow{color:var(--muted);font-size:13px;margin:8px 0}#palList{max-height:50dvh;overflow:auto;margin-top:6px}#palList button{display:block;width:100%;text-align:left;background:transparent;border:none;color:var(--text);box-shadow:none;padding:11px 10px;border-radius:10px;font-size:15px;margin:0}#palList button.sel{background:rgba(255,122,0,.28)}#palIn{width:100%;box-sizing:border-box;padding:12px;border-radius:12px;border:1px solid var(--border);background:rgba(10,20,45,.7);color:var(--text);font-size:15px}
 #syncInfo{font-size:11px;color:var(--muted);white-space:nowrap}
 #graphwrap{display:none;position:relative;flex:1;min-height:0;background:radial-gradient(900px 600px at 50% 38%,#17356e 0%,#0b1c3e 52%,#060d20 100%)}
 #cv{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
@@ -66,7 +67,7 @@ header{flex-wrap:wrap}header b{font-size:15px}header input{order:5;flex:1 1 100%
 <button id="bioBtn" style="display:none">🔓 Masuk dengan Sidik Jari</button>
 <label class="rem"><input type="checkbox" id="rem"> Ingat di perangkat ini</label>
 <div class="err" id="err"></div></div></div>
-<div id="app"><header><b>🧠 Second Brain</b><input type="search" id="q" placeholder="Cari catatan…"><button class="tog on" id="tNote">📄 Catatan</button><button class="tog" id="tGraph">🕸️ Graf</button><button class="tog" id="tEdit">✏️ Editor</button><button id="tSet">⚙️</button><button id="tGit">🌿</button><button id="menu">☰</button><button id="out">Kunci</button><span id="syncInfo" title="Status sinkronisasi vault"></span></header>
+<div id="app"><header><b>🧠 Second Brain</b><input type="search" id="q" placeholder="Cari catatan…"><button class="tog on" id="tNote">📄 Catatan</button><button class="tog" id="tGraph">🕸️ Graf</button><button class="tog" id="tEdit">✏️ Editor</button><button id="tSet">⚙️</button><button id="tGit">🌿</button><button id="tPal">⚡</button><button id="menu">☰</button><button id="out">Kunci</button><span id="syncInfo" title="Status sinkronisasi vault"></span></header>
 <main id="mainNote"><nav id="nav"></nav><article id="view"></article></main>
 <div id="editorwrap">
   <div id="edBar"><b>✏️ Editor Vault</b><span class="path" id="edPath">—</span>
@@ -125,6 +126,13 @@ header{flex-wrap:wrap}header b{font-size:15px}header input{order:5;flex:1 1 100%
 </div>
 </div></div>
 
+
+<div id="pal" class="ovl" style="display:none"><div class="card">
+<h3>⚡ Lompat Cepat</h3>
+<input id="palIn" type="text" placeholder="Ketik nama catatan atau perintah…">
+<div id="palList"></div>
+<button id="palClose">Tutup</button>
+</div></div>
 <div id="gitPanel" class="ovl" style="display:none"><div class="card">
 <div class="cardbody">
 <h3>🌿 Git — second-brain</h3>
@@ -169,6 +177,9 @@ function show(data){
 }
 function renderNav(f){
   const nav=document.getElementById("nav");nav.innerHTML="";let grp="";
+  if(!f){const sect=(label,arr)=>{if(!arr.length)return;const d=document.createElement("div");d.className="grp";d.textContent=label;nav.appendChild(d);for(const n of arr){const a=document.createElement("a");a.href="#";a.textContent=n.title;a.dataset.path=n.path;a.onclick=e=>{e.preventDefault();openNote(n.path);nav.classList.remove("open")};nav.appendChild(a)}};
+    sect("⭐ Favorit",getFav().map(p=>NOTES.find(n=>n.path===p)).filter(Boolean));
+    try{sect("🕒 Terakhir Dibuka",JSON.parse(localStorage.getItem("sbw_recent")||"[]").map(p=>NOTES.find(n=>n.path===p)).filter(Boolean))}catch(e){}}
   for(const n of NOTES){
     if(n.hub)continue;
     if(f && !(n.title+" "+n.path+" "+noteTags(n).join(" ")).toLowerCase().includes(f.replace(/^#/,"")))continue;
@@ -177,22 +188,30 @@ function renderNav(f){
     const a=document.createElement("a");a.href="#";a.textContent=n.title;a.dataset.path=n.path;
     a.onclick=e=>{e.preventDefault();openNote(n.path);nav.classList.remove("open")};nav.appendChild(a);
   }
+  if(!f){const counts={};for(const n of NOTES){if(n.hub)continue;for(const t of noteTags(n))counts[t]=(counts[t]||0)+1}
+    const ts=Object.keys(counts).sort();if(ts.length){const d=document.createElement("div");d.className="grp";d.textContent="🏷️ Tag";nav.appendChild(d);for(const t of ts){const a=document.createElement("a");a.href="#";a.textContent="#"+t+" ("+counts[t]+")";a.onclick=e=>{e.preventDefault();const q=document.getElementById("q");q.value="#"+t;q.dispatchEvent(new Event("input"))};nav.appendChild(a)}}}
 }
 function openNote(path){
   const n=NOTES.find(x=>x.path===path);if(!n)return;
   window._curPath=path;setView(false);
+  try{let r=JSON.parse(localStorage.getItem("sbw_recent")||"[]");r=[path,...r.filter(p=>p!==path)].slice(0,5);localStorage.setItem("sbw_recent",JSON.stringify(r))}catch(e){}
   const v=document.getElementById("view");v.innerHTML=n.html;v.scrollTop=0;
   document.querySelectorAll("nav a").forEach(a=>a.classList.toggle("act",a.dataset.path===path));
   v.querySelectorAll("a[data-note]").forEach(a=>a.onclick=e=>{e.preventDefault();openNote(a.dataset.note)});
   const tags=noteTags(n),bl=backlinks(path);
-  if(tags.length||bl.length){
-    const meta=document.createElement("div");meta.className="notemeta";let h="";
+  const favs0=getFav(),wc=(v.textContent||"").trim().split(/\s+/).filter(Boolean).length;
+  const hs=[...v.querySelectorAll("h1,h2,h3")];
+  if(hs.length>2){const od=document.createElement("details");od.className="outline";let oh="<summary>🧭 Daftar Isi ("+hs.length+")</summary>";hs.forEach((h,i)=>{h.id="hh"+i;oh+='<a href="#" data-hh="'+i+'" style="padding-left:'+((+h.tagName[1]-1)*14)+'px">'+h.textContent+"</a>"});od.innerHTML=oh;v.insertBefore(od,v.firstChild);od.querySelectorAll("a[data-hh]").forEach(a=>a.onclick=e=>{e.preventDefault();hs[+a.dataset.hh].scrollIntoView({behavior:"smooth",block:"start"})})}
+  if(true){
+    const meta=document.createElement("div");meta.className="notemeta";let h='<div class="tagrow"><button class="tag" id="mFav">'+(favs0.includes(path)?"⭐ Favorit":"☆ Jadikan Favorit")+'</button><button class="tag" id="mLocal">🕸️ Graf Lokal</button></div><div class="statrow">📄 '+wc+' kata · ±'+Math.max(1,Math.round(wc/180))+' menit baca</div>';
     if(tags.length)h+='<div class="tagrow">'+tags.map(t=>'<button class="tag" data-tag="'+t+'">#'+t+'</button>').join("")+'</div>';
     if(bl.length)h+='<div class="blrow">🔗 <b>Ditautkan dari:</b> '+bl.map(p=>{const o=NOTES.find(x=>x.path===p);return '<a href="#" data-note="'+p+'">'+(o?o.title:p)+'</a>'}).join(" · ")+'</div>';
     meta.innerHTML=h;v.appendChild(meta);
     meta.querySelectorAll("a[data-note]").forEach(a=>a.onclick=e=>{e.preventDefault();openNote(a.dataset.note)});
     meta.querySelectorAll(".tag").forEach(b=>b.onclick=()=>{const q=document.getElementById("q");q.value="#"+b.dataset.tag;q.dispatchEvent(new Event("input"));document.getElementById("nav").classList.add("open")});
   }
+  const mf=document.getElementById("mFav");if(mf)mf.onclick=()=>{toggleFav(path);openNote(path)};
+  const ml=document.getElementById("mLocal");if(ml)ml.onclick=()=>openLocalGraph(path);
 }
 async function tryGo(){
   const pw=document.getElementById("pw").value,err=document.getElementById("err");err.textContent="";
@@ -554,6 +573,57 @@ document.getElementById("gitClose").onclick=()=>document.getElementById("gitPane
 document.getElementById("gitPull").onclick=async()=>{await syncLive();openGit()};
 document.getElementById("gitPush").onclick=async()=>{await flushQueue(false);await syncLive();openGit()};
 
+
+/* ===== v2.0: Obsidian core pack — favorites, recents, palette, local graph, daily note ===== */
+const getFav=()=>{try{return JSON.parse(localStorage.getItem("sbw_fav")||"[]")}catch(e){return[]}};
+function toggleFav(p){let f=getFav();f=f.includes(p)?f.filter(x=>x!==p):[...f,p];localStorage.setItem("sbw_fav",JSON.stringify(f));renderNav(document.getElementById("q").value.toLowerCase())}
+function openLocalGraph(path){
+  const nb=new Set([path]);
+  (GRAPH?GRAPH.edges:[]).forEach(e=>{if(e[0]===path)nb.add(e[1]);if(e[1]===path)nb.add(e[0])});
+  window._GSRC=NOTES.filter(n=>nb.has(n.path));G=null;setView(true);
+}
+async function dailyNote(){
+  const d=new Date(),p="Harian/"+d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+".md";
+  if(NOTES.some(n=>n.path===p)){openNote(p);return}
+  if(!edTok()){alert("Catatan harian butuh token GitHub — isi sekali di tab Editor.");return}
+  const body="# "+p.slice(7,-3)+"\n\n## Fokus\n\n- \n\n## Catatan\n\n\n## Selesai\n\n";
+  try{await ghApi("/contents/"+p.split("/").map(encodeURIComponent).join("/"),{method:"PUT",body:JSON.stringify({message:"Catatan harian "+p,content:b64enc(body)})})}catch(e){}
+  await syncLive();openNote(p);
+}
+let palItems=[],palSel=0;
+function palCommands(){return[
+ {t:"🕸️ Graf Global",run:()=>{window._GSRC=null;G=null;setView(true)}},
+ {t:"🕸️ Graf Lokal — catatan yang sedang dibuka",run:()=>{if(window._curPath)openLocalGraph(window._curPath)}},
+ {t:"✏️ Buka Editor",run:()=>document.getElementById("tEdit").click()},
+ {t:"🌿 Panel Git",run:()=>openGit()},
+ {t:"⚙️ Setelan",run:()=>document.getElementById("tSet").click()},
+ {t:"🔄 Sinkron Sekarang",run:()=>syncLive()},
+ {t:"📅 Catatan Hari Ini",run:()=>dailyNote()},
+ {t:"🔒 Kunci Layar",run:()=>document.getElementById("out").click()},
+]}
+function palRender(q){
+  q=(q||"").toLowerCase();const L=document.getElementById("palList");palItems=[];
+  for(const c of palCommands())if(c.t.toLowerCase().includes(q))palItems.push(c);
+  for(const n of NOTES)if(!n.hub&&(n.title+" "+n.path).toLowerCase().includes(q))palItems.push({t:"📄 "+n.title,run:()=>openNote(n.path)});
+  palSel=0;const show=palItems.slice(0,14);
+  L.innerHTML=show.map((c,i)=>'<button data-i="'+i+'" class="'+(i===palSel?"sel":"")+'">'+c.t+"</button>").join("")||'<p class="hint">Tidak ada hasil.</p>';
+  L.querySelectorAll("button").forEach(b=>b.onclick=()=>palPick(+b.dataset.i));
+}
+function palPick(i){const c=palItems[i];if(!c)return;document.getElementById("pal").style.display="none";c.run()}
+function openPal(){document.getElementById("pal").style.display="flex";const i=document.getElementById("palIn");i.value="";palRender("");setTimeout(()=>i.focus(),60)}
+document.getElementById("tPal").onclick=openPal;
+document.getElementById("palClose").onclick=()=>document.getElementById("pal").style.display="none";
+document.getElementById("palIn").addEventListener("input",e=>palRender(e.target.value));
+document.getElementById("palIn").addEventListener("keydown",e=>{
+  const L=document.getElementById("palList");
+  if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();palSel=Math.max(0,Math.min(palItems.slice(0,14).length-1,palSel+(e.key==="ArrowDown"?1:-1)));L.querySelectorAll("button").forEach((b,i)=>b.classList.toggle("sel",i===palSel))}
+  else if(e.key==="Enter"){e.preventDefault();palPick(palSel)}
+});
+document.addEventListener("keydown",e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();openPal()}
+  if(e.key==="Escape")document.getElementById("pal").style.display="none";
+});
+
 /* ===== Graph view: force-directed brain network ===== */
 if(!CanvasRenderingContext2D.prototype.roundRect){CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){r=Math.min(r,w/2,h/2);this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);this.closePath();return this}}
 const COLORS={"00-Beranda.md":"#FF7A00","Memori":"#4da3ff","Orang":"#ffd24d","Grup":"#ff7bd5","Proyek":"#5ee08a","Lainnya":"#b9c6e8"};
@@ -569,15 +639,15 @@ function setView(graph){
   if(graph)initGraph();
 }
 document.getElementById("tNote").onclick=()=>setView(false);
-document.getElementById("tGraph").onclick=()=>setView(true);
+document.getElementById("tGraph").onclick=()=>{window._GSRC=null;G=null;setView(true)};
 function initGraph(){
   const cv=document.getElementById("cv"),wrap=document.getElementById("graphwrap");
   cv.width=wrap.clientWidth*devicePixelRatio;cv.height=wrap.clientHeight*devicePixelRatio;
   if(!G){
-    const idx={};NOTES.forEach((n,i)=>idx[n.path]=i);
-    const deg=NOTES.map(()=>0);const E=(GRAPH?GRAPH.edges:[]).map(e=>[idx[e[0]],idx[e[1]]]).filter(e=>e[0]!=null&&e[1]!=null);
+    const SRC=window._GSRC||NOTES;const idx={};SRC.forEach((n,i)=>idx[n.path]=i);
+    const deg=SRC.map(()=>0);const E=(GRAPH?GRAPH.edges:[]).map(e=>[idx[e[0]],idx[e[1]]]).filter(e=>e[0]!=null&&e[1]!=null);
     E.forEach(e=>{deg[e[0]]++;deg[e[1]]++});
-    const N=NOTES.map((n,i)=>{const a=i/NOTES.length*Math.PI*2,r=150+(i%5)*64;return{n,x:Math.cos(a)*r,y:Math.sin(a)*r,vx:0,vy:0,deg:deg[i],rad:6+Math.min(11,deg[i]*1.15)}});
+    const N=SRC.map((n,i)=>{const a=i/SRC.length*Math.PI*2,r=150+(i%5)*64;return{n,x:Math.cos(a)*r,y:Math.sin(a)*r,vx:0,vy:0,deg:deg[i],rad:6+Math.min(11,deg[i]*1.15)}});
     G={N,E};view={x:0,y:0,k:1,k0:1};for(let s=0;s<110;s++){for(let i=0;i<N.length;i++)for(let j=i+1;j<N.length;j++){let dx=N[i].x-N[j].x,dy=N[i].y-N[j].y,d2=dx*dx+dy*dy+0.01,d=Math.sqrt(d2),f=4200/d2;dx/=d;dy/=d;N[i].vx+=dx*f;N[i].vy+=dy*f;N[j].vx-=dx*f;N[j].vy-=dy*f}for(const[a,b]of E){let dx=N[b].x-N[a].x,dy=N[b].y-N[a].y,d=Math.sqrt(dx*dx+dy*dy)+0.01,f=(d-120)*0.028;dx/=d;dy/=d;N[a].vx+=dx*f;N[a].vy+=dy*f;N[b].vx-=dx*f;N[b].vy-=dy*f}for(const n of N){n.vx+=-n.x*0.0011;n.vy+=-n.y*0.0011;n.vx*=0.86;n.vy*=0.86;n.x+=n.vx;n.y+=n.vy}}fitView();
     requestAnimationFrame(tick);
   }
