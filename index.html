@@ -113,6 +113,7 @@ header{flex-wrap:wrap}header b{font-size:15px}header input{order:5;flex:1 1 100%
 <p class="hint">Unduh paket berisi seluruh catatan dalam teks asli (Markdown). Bila server Devin AI hilang/berpindah, serahkan file ini ke Devin AI yang baru dan minta ia memulihkan ingatannya dari paket ini.</p>
 <button id="recBtn">⬇️ Unduh Paket Pemulihan</button>
 <button id="recZipBtn">🗜️ Unduh ZIP Semua File (untuk agen lain)</button>
+<p class="hint" id="recStat"></p>
 <hr>
 <h4>🤖 Koneksi AI (kunci API milikmu sendiri)</h4>
 <label>Penyedia</label>
@@ -703,6 +704,47 @@ async function createFromTemplate(tpl){
   try{await ghApi("/contents/"+name.split("/").map(encodeURIComponent).join("/"),{method:"PUT",body:JSON.stringify({message:"Catatan baru dari template "+tpl,content:b64enc(body)})})}catch(e){alert("Gagal membuat catatan: "+e.message);return}
   await syncLive();openNote(name);
 }
+
+
+/* ===== v2.3: recovery downloads that work inside the app (save to repo) ===== */
+function recFiles(){
+  let files=null,src="potret terenkripsi di web";
+  try{const c=JSON.parse(localStorage.getItem("sbw_cache")||"null");if(c&&c.raw&&c.raw.length){files=c.raw;src="sinkron live terakhir dari repo"}}catch(e){}
+  if(!files&&window._DATA&&_DATA.recovery)files=_DATA.recovery.files;
+  if(files)files=files.filter(f=>!f.path.startsWith("Pemulihan/"));
+  return{files,src};
+}
+function blobB64(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]);r.onerror=rej;r.readAsDataURL(blob)})}
+async function recSave(kind){
+  const st=document.getElementById("recStat"),got=recFiles(),files=got.files;
+  if(!files||!files.length){st.textContent="Data belum tersedia di versi potret ini.";return}
+  const now=new Date(),ds=now.toISOString().slice(0,10);
+  let blob,name;
+  if(kind==="md"){
+    let out="# Paket Pemulihan Second Brain\nDibangun: "+now.toLocaleString("id-ID")+" · Sumber: "+got.src+" · Isi: "+files.length+" file\n\nINSTRUKSI PEMULIHAN: Serahkan file ini ke Devin AI di server baru dan minta: \"Pulihkan memorimu dari paket ini — tulis ulang tiap file ke path-nya, persis seperti tertulis.\"\n";
+    for(const f of files)out+="\n\n===== FILE: "+f.path+" =====\n"+f.text;
+    blob=new Blob([out],{type:"text/markdown"});name="paket-pemulihan-"+ds+".md";
+  }else{
+    const enc=new TextEncoder();
+    const guide="# Pemulihan Second Brain — untuk agen AI lain\n\nZIP ini berisi vault Obsidian lengkap milik Yofi A (Kontenlaris Studio), diekspor dari web privatnya pada "+now.toLocaleString("id-ID")+" (sumber: "+got.src+").\n\n## Cara memakai di agen/server baru\n1. Ekstrak ZIP ini ke folder obsidian-vault/ (struktur folder di dalam ZIP sudah persis struktur vault).\n2. File terpenting: Memori/MEMORY.md, Memori/AGENTS.md, Memori/USER.md, SOUL.md.\n3. Salin ke home agen baru: Memori/MEMORY.md -> ~/MEMORY.md, Memori/AGENTS.md -> ~/AGENTS.md, Memori/USER.md -> ~/USER.md, SOUL.md -> ~/SOUL.md.\n4. Setelah tersalin, agen baru melanjutkan dari keadaan terakhir pemilik.\n";
+    blob=zipStore([{name:"PEMULIHAN.md",data:enc.encode(guide)},...files.map(f=>({name:f.path,data:enc.encode(f.text)}))]);
+    name="second-brain-vault-"+ds+".zip";
+  }
+  if(edTok()){
+    st.textContent="⏳ Menyimpan ke repo…";
+    try{
+      const b64=await blobB64(blob);let sha;
+      try{const r=await ghApi("/contents/Pemulihan/"+name);sha=r.sha}catch(e){}
+      await ghApi("/contents/Pemulihan/"+name,{method:"PUT",body:JSON.stringify({message:"Paket pemulihan "+ds,content:b64,...(sha?{sha}:{})})});
+      st.innerHTML='✓ Tersimpan di repo: <a href="https://github.com/'+GH_REPO+'/blob/main/Pemulihan/'+name+'" target="_blank" style="color:var(--accent)">Pemulihan/'+name+'</a> — ketuk untuk membuka & mengunduh dari GitHub.';
+    }catch(e){st.textContent="Gagal menyimpan ke repo: "+e.message}
+  }else{
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    st.textContent="✓ Unduhan dimulai (mode browser).";
+  }
+}
+document.getElementById("recBtn").onclick=()=>recSave("md");
+document.getElementById("recZipBtn").onclick=()=>recSave("zip");
 
 /* ===== Graph view: force-directed brain network ===== */
 if(!CanvasRenderingContext2D.prototype.roundRect){CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){r=Math.min(r,w/2,h/2);this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);this.closePath();return this}}
