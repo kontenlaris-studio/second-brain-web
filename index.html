@@ -730,6 +730,8 @@ async function recSave(kind){
     blob=zipStore([{name:"PEMULIHAN.md",data:enc.encode(guide)},...files.map(f=>({name:f.path,data:enc.encode(f.text)}))]);
     name="second-brain-vault-"+ds+".zip";
   }
+  st.textContent="⏳ Menyiapkan file…";
+  try{if(await recSaveNative(blob,name)){st.textContent="✓ File dibuat langsung di aplikasi: "+name+" — bila menu bagikan tidak muncul, file tersimpan di cache aplikasi.";return}}catch(e){}
   if(edTok()){
     st.textContent="⏳ Menyimpan ke repo…";
     try{
@@ -745,6 +747,19 @@ async function recSave(kind){
 }
 document.getElementById("recBtn").onclick=()=>recSave("md");
 document.getElementById("recZipBtn").onclick=()=>recSave("zip");
+
+
+/* ===== v2.4: native in-app download via Capacitor Filesystem + Share ===== */
+async function recSaveNative(blob,name){
+  const CP=window.Capacitor;
+  if(!CP||!CP.isNativePlatform||!CP.isNativePlatform())return false;
+  const FS=CP.Plugins&&CP.Plugins.Filesystem,SH=CP.Plugins&&CP.Plugins.Share;
+  if(!FS)return false;
+  const b64=await blobB64(blob);
+  const w=await FS.writeFile({path:name,data:b64,directory:"CACHE"});
+  if(SH){try{await SH.share({title:name,url:w.uri,dialogTitle:"Simpan / bagikan file"})}catch(e){}}
+  return true;
+}
 
 /* ===== Graph view: force-directed brain network ===== */
 if(!CanvasRenderingContext2D.prototype.roundRect){CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){r=Math.min(r,w/2,h/2);this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);this.closePath();return this}}
