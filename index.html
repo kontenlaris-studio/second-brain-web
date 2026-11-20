@@ -48,6 +48,7 @@ article blockquote{border-left:3px solid var(--acc);margin:14px 0;padding:4px 14
 .notemeta{margin-top:30px;border-top:1px solid var(--border);padding-top:14px;font-size:13px;color:var(--muted);line-height:1.7}.tagrow{margin-bottom:8px}.tag{background:rgba(255,122,0,.13);border:1px solid rgba(255,122,0,.45);color:#ffb066;border-radius:999px;padding:3px 11px;font-size:12px;margin:0 6px 6px 0;box-shadow:none;cursor:pointer}.blrow a{color:#7cc4ff}
 .ovl .card{background:#0b1a33}#gitPanel .card{display:flex;flex-direction:column;overflow:hidden}#gitPanel .cardbody{overflow:auto;min-height:0}#gitPanel .cardfoot{border-top:1px solid var(--border);padding-top:12px;margin-top:12px;display:grid}
 .outline{background:rgba(20,40,80,.55);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:14px}.outline summary{cursor:pointer;font-weight:600}.outline a{display:block;color:var(--muted);text-decoration:none;padding:3px 0;font-size:14px}.statrow{color:var(--muted);font-size:13px;margin:8px 0}#palList{max-height:50dvh;overflow:auto;margin-top:6px}#palList button{display:block;width:100%;text-align:left;background:transparent;border:none;color:var(--text);box-shadow:none;padding:11px 10px;border-radius:10px;font-size:15px;margin:0}#palList button.sel{background:rgba(255,122,0,.28)}#palIn{width:100%;box-sizing:border-box;padding:12px;border-radius:12px;border:1px solid var(--border);background:rgba(10,20,45,.7);color:var(--text);font-size:15px}
+#canvaswrap{flex:1;min-height:0;flex-direction:column}#cvBoard{flex:1;overflow:auto;position:relative;background:radial-gradient(900px 600px at 50% 38%,#122c5c 0%,#0a1a38 55%,#060d20 100%)}#cvInner{position:relative;width:2600px;height:1800px}#cvSvg{position:absolute;left:0;top:0;width:2600px;height:1800px;pointer-events:none}.cvcard{position:absolute;width:230px;background:#0d1f3f;border:1px solid var(--border);border-radius:14px;padding:10px 12px;cursor:grab;box-shadow:0 8px 24px rgba(0,0,0,.35)}.cvcard h5{margin:0 18px 6px 0;font-size:14px}.cvcard p{margin:0;font-size:12px;color:var(--muted);max-height:66px;overflow:hidden}.cvx{position:absolute;top:6px;right:6px;width:24px;height:24px;padding:0;border-radius:8px;background:rgba(255,255,255,.08);border:1px solid var(--border);color:var(--text);box-shadow:none;font-size:12px}.cvbar{display:flex;gap:8px;align-items:center;padding:8px 10px;flex-wrap:wrap}.cvbar .hint{color:var(--muted);font-size:12px}
 #syncInfo{font-size:11px;color:var(--muted);white-space:nowrap}
 #graphwrap{display:none;position:relative;flex:1;min-height:0;background:radial-gradient(900px 600px at 50% 38%,#17356e 0%,#0b1c3e 52%,#060d20 100%)}
 #cv{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
@@ -67,7 +68,7 @@ header{flex-wrap:wrap}header b{font-size:15px}header input{order:5;flex:1 1 100%
 <button id="bioBtn" style="display:none">🔓 Masuk dengan Sidik Jari</button>
 <label class="rem"><input type="checkbox" id="rem"> Ingat di perangkat ini</label>
 <div class="err" id="err"></div></div></div>
-<div id="app"><header><b>🧠 Second Brain</b><input type="search" id="q" placeholder="Cari catatan…"><button class="tog on" id="tNote">📄 Catatan</button><button class="tog" id="tGraph">🕸️ Graf</button><button class="tog" id="tEdit">✏️ Editor</button><button id="tSet">⚙️</button><button id="tGit">🌿</button><button id="tPal">⚡</button><button id="menu">☰</button><button id="out">Kunci</button><span id="syncInfo" title="Status sinkronisasi vault"></span></header>
+<div id="app"><header><b>🧠 Second Brain</b><input type="search" id="q" placeholder="Cari catatan…"><button class="tog on" id="tNote">📄 Catatan</button><button class="tog" id="tGraph">🕸️ Graf</button><button class="tog" id="tEdit">✏️ Editor</button><button class="tog" id="tCanvas">🧩 Canvas</button><button id="tSet">⚙️</button><button id="tGit">🌿</button><button id="tPal">⚡</button><button id="menu">☰</button><button id="out">Kunci</button><span id="syncInfo" title="Status sinkronisasi vault"></span></header>
 <main id="mainNote"><nav id="nav"></nav><article id="view"></article></main>
 <div id="editorwrap">
   <div id="edBar"><b>✏️ Editor Vault</b><span class="path" id="edPath">—</span>
@@ -83,7 +84,11 @@ header{flex-wrap:wrap}header b{font-size:15px}header input{order:5;flex:1 1 100%
 </div>
 <div id="graphwrap"><canvas id="cv"></canvas>
 <div class="ghint">Seret titik = pindah node • Klik titik = buka catatan • Seret latar / roda / cubit = geser & zoom</div>
-<div class="gbtns"><button id="gz">+</button><button id="gzo">−</button><button id="gr">⟳</button></div></div></div>
+<div class="gbtns"><button id="gz">+</button><button id="gzo">−</button><button id="gr">⟳</button></div></div>
+<section id="canvaswrap" style="display:none">
+<div class="cvbar"><button id="cvAdd">➕ Tambah Kartu</button><button id="cvClear">🗑 Bersihkan</button><span class="hint">Seret kartu = pindah · ketuk kartu = buka catatan · garis = wikilink antar-kartu</span></div>
+<div id="cvBoard"><div id="cvInner"><svg id="cvSvg"></svg></div></div>
+</section></div>
 <script>/**
  * marked v12.0.2 - a markdown parser
  * Copyright (c) 2011-2024, Christopher Jeffrey. (MIT Licensed)
@@ -243,6 +248,7 @@ function setEditor(on){
   document.getElementById("editorwrap").style.display=on?"flex":"none";
   document.getElementById("mainNote").style.display=on?"none":"flex";
   document.getElementById("graphwrap").style.display="none";
+  document.getElementById("canvaswrap").style.display="none";document.getElementById("tCanvas").classList.toggle("on",false);
   document.getElementById("tEdit").classList.toggle("on",on);
   document.getElementById("tNote").classList.toggle("on",!on);
   document.getElementById("tGraph").classList.toggle("on",false);
@@ -599,18 +605,21 @@ function palCommands(){return[
  {t:"⚙️ Setelan",run:()=>document.getElementById("tSet").click()},
  {t:"🔄 Sinkron Sekarang",run:()=>syncLive()},
  {t:"📅 Catatan Hari Ini",run:()=>dailyNote()},
+ {t:"📋 Catatan Baru dari Template",run:()=>openTemplatePal()},
  {t:"🔒 Kunci Layar",run:()=>document.getElementById("out").click()},
 ]}
 function palRender(q){
   q=(q||"").toLowerCase();const L=document.getElementById("palList");palItems=[];
-  for(const c of palCommands())if(c.t.toLowerCase().includes(q))palItems.push(c);
-  for(const n of NOTES)if(!n.hub&&(n.title+" "+n.path).toLowerCase().includes(q))palItems.push({t:"📄 "+n.title,run:()=>openNote(n.path)});
+  if(window._palMode==="tpl"){for(const n of NOTES)if(n.path.startsWith("Template/")&&(n.title+" "+n.path).toLowerCase().includes(q))palItems.push({t:"📋 "+n.title,run:()=>createFromTemplate(n.path)})}
+  else if(window._palMode==="cv"){const on=cvGet().map(c=>c.path);for(const n of NOTES)if(!n.hub&&!on.includes(n.path)&&(n.title+" "+n.path).toLowerCase().includes(q))palItems.push({t:"🧩 "+n.title,run:()=>cvAdd(n.path)})}
+  else{for(const c of palCommands())if(c.t.toLowerCase().includes(q))palItems.push(c);
+  for(const n of NOTES)if(!n.hub&&(n.title+" "+n.path).toLowerCase().includes(q))palItems.push({t:"📄 "+n.title,run:()=>openNote(n.path)})}
   palSel=0;const show=palItems.slice(0,14);
   L.innerHTML=show.map((c,i)=>'<button data-i="'+i+'" class="'+(i===palSel?"sel":"")+'">'+c.t+"</button>").join("")||'<p class="hint">Tidak ada hasil.</p>';
   L.querySelectorAll("button").forEach(b=>b.onclick=()=>palPick(+b.dataset.i));
 }
-function palPick(i){const c=palItems[i];if(!c)return;document.getElementById("pal").style.display="none";c.run()}
-function openPal(){document.getElementById("pal").style.display="flex";const i=document.getElementById("palIn");i.value="";palRender("");setTimeout(()=>i.focus(),60)}
+function palPick(i){const c=palItems[i];if(!c)return;document.getElementById("pal").style.display="none";window._palMode=null;c.run()}
+function openPal(){window._palMode=null;document.getElementById("pal").style.display="flex";const i=document.getElementById("palIn");i.value="";palRender("");setTimeout(()=>i.focus(),60)}
 document.getElementById("tPal").onclick=openPal;
 document.getElementById("palClose").onclick=()=>document.getElementById("pal").style.display="none";
 document.getElementById("palIn").addEventListener("input",e=>palRender(e.target.value));
@@ -624,6 +633,65 @@ document.addEventListener("keydown",e=>{
   if(e.key==="Escape")document.getElementById("pal").style.display="none";
 });
 
+
+/* ===== v2.1: Canvas board + note templates ===== */
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const cvGet=()=>{try{return JSON.parse(localStorage.getItem("sbw_canvas")||"[]")}catch(e){return[]}};
+const cvSave=a=>localStorage.setItem("sbw_canvas",JSON.stringify(a));
+function cvAdd(p){const c=cvGet();c.push({path:p,x:40+(c.length%5)*36,y:40+(c.length%5)*36});cvSave(c);setCanvas()}
+function setCanvas(){
+  document.getElementById("editorwrap").style.display="none";
+  document.getElementById("mainNote").style.display="none";
+  document.getElementById("graphwrap").style.display="none";
+  document.getElementById("canvaswrap").style.display="flex";
+  document.getElementById("tNote").classList.toggle("on",false);
+  document.getElementById("tGraph").classList.toggle("on",false);
+  document.getElementById("tEdit").classList.toggle("on",false);
+  document.getElementById("tCanvas").classList.toggle("on",true);
+  buildCanvas();
+}
+function buildCanvas(){
+  const inner=document.getElementById("cvInner");inner.querySelectorAll(".cvcard").forEach(e=>e.remove());
+  const cards=cvGet(),pos={};cards.forEach(c=>pos[c.path]=c);
+  let lines="";
+  (GRAPH?GRAPH.edges:[]).forEach(e=>{if(pos[e[0]]&&pos[e[1]]){const a=pos[e[0]],b=pos[e[1]];lines+='<line x1="'+(a.x+115)+'" y1="'+(a.y+34)+'" x2="'+(b.x+115)+'" y2="'+(b.y+34)+'" stroke="rgba(140,170,255,.45)" stroke-width="1.5"/>'}});
+  document.getElementById("cvSvg").innerHTML=lines;
+  for(const c of cards){
+    const n=NOTES.find(x=>x.path===c.path);if(!n)continue;
+    const tmp=document.createElement("div");tmp.innerHTML=n.html;
+    const d=document.createElement("div");d.className="cvcard";d.style.left=c.x+"px";d.style.top=c.y+"px";
+    d.innerHTML='<button class="cvx">✕</button><h5>'+esc(n.title)+'</h5><p>'+esc((tmp.textContent||"").slice(0,150))+'</p>';
+    d.querySelector(".cvx").onclick=e=>{e.stopPropagation();cvSave(cvGet().filter(k=>k.path!==c.path));buildCanvas()};
+    d.addEventListener("pointerdown",e=>{
+      if(e.target.classList.contains("cvx"))return;
+      const sx=e.clientX,sy=e.clientY,ox=c.x,oy=c.y;let moved=false;
+      const mv=ev=>{const dx=ev.clientX-sx,dy=ev.clientY-sy;if(Math.abs(dx)+Math.abs(dy)>5)moved=true;c.x=Math.max(0,ox+dx);c.y=Math.max(0,oy+dy);d.style.left=c.x+"px";d.style.top=c.y+"px"};
+      const up=()=>{window.removeEventListener("pointermove",mv);window.removeEventListener("pointerup",up);cvSave(cvGet().map(k=>k.path===c.path?c:k));buildCanvas();if(!moved)openNote(c.path)};
+      window.addEventListener("pointermove",mv);window.addEventListener("pointerup",up);
+    });
+    inner.appendChild(d);
+  }
+}
+document.getElementById("tCanvas").onclick=setCanvas;
+document.getElementById("cvAdd").onclick=()=>{document.getElementById("pal").style.display="flex";window._palMode="cv";const i=document.getElementById("palIn");i.value="";palRender("");setTimeout(()=>i.focus(),60)};
+document.getElementById("cvClear").onclick=()=>{if(confirm("Bersihkan semua kartu dari papan?")){cvSave([]);buildCanvas()}};
+function openTemplatePal(){
+  if(!NOTES.some(n=>n.path.startsWith("Template/"))){alert("Belum ada template — buat catatan di folder Template/ lewat Editor.");return}
+  document.getElementById("pal").style.display="flex";window._palMode="tpl";const i=document.getElementById("palIn");i.value="";palRender("");setTimeout(()=>i.focus(),60);
+}
+async function createFromTemplate(tpl){
+  if(!edTok()){alert("Butuh token GitHub — isi sekali di tab Editor.");return}
+  let raw=null;
+  try{const c=JSON.parse(localStorage.getItem("sbw_cache")||"null");if(c&&c.raw){const f=c.raw.find(x=>x.path===tpl);if(f)raw=f.text}}catch(e){}
+  if(raw==null){try{const r=await ghApi("/contents/"+tpl.split("/").map(encodeURIComponent).join("/"));raw=b64dec(r.content)}catch(e){alert("Gagal membaca template: "+e.message);return}}
+  const name=prompt("Path catatan baru (mis. Proyek/nama-baru.md):","Catatan/"+tpl.split("/").pop().replace(/\.md$/,"")+"-baru.md");
+  if(!name)return;
+  const d=new Date(),ds=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  const body=raw.replaceAll("{{date}}",ds).replaceAll("{{title}}",name.split("/").pop().replace(/\.md$/,""));
+  try{await ghApi("/contents/"+name.split("/").map(encodeURIComponent).join("/"),{method:"PUT",body:JSON.stringify({message:"Catatan baru dari template "+tpl,content:b64enc(body)})})}catch(e){alert("Gagal membuat catatan: "+e.message);return}
+  await syncLive();openNote(name);
+}
+
 /* ===== Graph view: force-directed brain network ===== */
 if(!CanvasRenderingContext2D.prototype.roundRect){CanvasRenderingContext2D.prototype.roundRect=function(x,y,w,h,r){r=Math.min(r,w/2,h/2);this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);this.closePath();return this}}
 const COLORS={"00-Beranda.md":"#FF7A00","Memori":"#4da3ff","Orang":"#ffd24d","Grup":"#ff7bd5","Proyek":"#5ee08a","Lainnya":"#b9c6e8"};
@@ -633,6 +701,7 @@ function setView(graph){
   document.getElementById("editorwrap").style.display="none";
   document.getElementById("tEdit").classList.toggle("on",false);
   document.getElementById("mainNote").style.display=graph?"none":"flex";
+  document.getElementById("canvaswrap").style.display="none";document.getElementById("tCanvas").classList.toggle("on",false);
   document.getElementById("graphwrap").style.display=graph?"block":"none";
   document.getElementById("tNote").classList.toggle("on",!graph);
   document.getElementById("tGraph").classList.toggle("on",graph);
