@@ -62,6 +62,7 @@ header{flex-wrap:wrap}header b{font-size:15px}header input{order:5;flex:1 1 100%
 <h1>Second Brain</h1><p>Vault privat Kontenlaris Studio — 29 catatan terenkripsi AES-256. Masukkan password untuk membuka.</p>
 <input type="password" id="pw" placeholder="Password" autocomplete="current-password">
 <button id="go">Buka Vault</button>
+<button id="bioBtn" style="display:none">🔓 Masuk dengan Sidik Jari</button>
 <label class="rem"><input type="checkbox" id="rem"> Ingat di perangkat ini</label>
 <div class="err" id="err"></div></div></div>
 <div id="app"><header><b>🧠 Second Brain</b><input type="search" id="q" placeholder="Cari catatan…"><button class="tog on" id="tNote">📄 Catatan</button><button class="tog" id="tGraph">🕸️ Graf</button><button class="tog" id="tEdit">✏️ Editor</button><button id="tSet">⚙️</button><button id="menu">☰</button><button id="out">Kunci</button><span id="syncInfo" title="Status sinkronisasi vault"></span></header>
@@ -95,6 +96,11 @@ header{flex-wrap:wrap}header b{font-size:15px}header input{order:5;flex:1 1 100%
 <label>Auto-sinkron vault (menit — 0 = mati, sinkron hanya saat app dibuka)</label>
 <input type="number" id="setSyncMin" min="0" max="240" step="1">
 <button id="setSave">Simpan Setelan</button>
+<hr>
+<h4>🔓 Kunci Sidik Jari (perangkat ini)</h4>
+<p class="hint" id="bioStat"></p>
+<button id="bioOn">Aktifkan Sidik Jari</button>
+<button id="bioOff" style="background:transparent;border:1px solid var(--border);color:var(--text);box-shadow:none">Nonaktifkan Sidik Jari</button>
 <hr>
 <h4>🤖 Koneksi AI (kunci API milikmu sendiri)</h4>
 <label>Penyedia</label>
@@ -180,7 +186,7 @@ document.getElementById("go").onclick=tryGo;
 document.getElementById("pw").addEventListener("keydown",e=>{if(e.key==="Enter")tryGo()});
 document.getElementById("q").addEventListener("input",e=>renderNav(e.target.value.toLowerCase()));
 document.getElementById("menu").onclick=()=>document.getElementById("nav").classList.toggle("open");
-document.getElementById("out").onclick=()=>{localStorage.removeItem("sbw_key");location.reload()};
+document.getElementById("out").onclick=()=>{if(!localStorage.getItem("sbw_bio"))localStorage.removeItem("sbw_key");location.reload()};
 
 /* ===== Editor mode: live vault editing via GitHub API ===== */
 const GH_REPO="kontenlaris-studio/second-brain";
@@ -356,7 +362,7 @@ function openSettings(){
   sel.value=[...sel.options].some(o=>o.value===b)?b:"custom";
   document.getElementById("aiBase").style.display=sel.value==="custom"?"block":"none";
   if(sel.value==="custom")document.getElementById("aiBase").value=b;
-  document.getElementById("setPanel").style.display="flex";
+  bioStat();document.getElementById("setPanel").style.display="flex";
 }
 document.getElementById("tSet").onclick=openSettings;
 document.getElementById("setClose").onclick=()=>document.getElementById("setPanel").style.display="none";
@@ -411,6 +417,47 @@ document.getElementById("edDelete").onclick=async()=>{
     edCur=null;document.getElementById("edText").value="";document.getElementById("edPath").textContent="—";
     await edLoadList();edMsg("🗑 Catatan dihapus dari vault.");syncLive();
   }catch(e){edMsg("Gagal menghapus: "+e.message)}
+};
+
+
+/* ===== v1.5: biometric (WebAuthn) unlock ===== */
+const b64url=b=>btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+const ub64=s=>Uint8Array.from(atob(s.replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0));
+function bioStat(){
+  const el=document.getElementById("bioStat");if(!el)return;
+  const on=!!localStorage.getItem("sbw_bio");
+  el.textContent=on?"Status: AKTIF — di layar kunci, ketuk tombol sidik jari untuk masuk tanpa password.":"Status: nonaktif. Mengaktifkan akan menyimpan kunci vault di perangkat ini (sama seperti opsi 'ingat saya'), dilindungi prompt sidik jari sistem.";
+  document.getElementById("bioOn").style.display=on?"none":"block";
+  document.getElementById("bioOff").style.display=on?"block":"none";
+}
+document.getElementById("bioOn").onclick=async()=>{
+  const el=document.getElementById("bioStat");
+  try{
+    if(!window.PublicKeyCredential)throw new Error("Browser/perangkat ini tidak mendukung WebAuthn/passkey.");
+    if(!localStorage.getItem("sbw_key")){
+      const pw=prompt("Masukkan password vault sekali untuk mengaktifkan sidik jari:");
+      if(!pw)return;
+      const r=await unlock(pw);
+      localStorage.setItem("sbw_key",btoa(String.fromCharCode(...new Uint8Array(r.key))));
+    }
+    let uid=localStorage.getItem("sbw_bio_user");
+    if(!uid){uid=b64url(crypto.getRandomValues(new Uint8Array(16)));localStorage.setItem("sbw_bio_user",uid)}
+    const cred=await navigator.credentials.create({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),rp:{name:"Second Brain"},user:{id:ub64(uid),name:"second-brain",displayName:"Second Brain"},pubKeyCredParams:[{type:"public-key",alg:-7},{type:"public-key",alg:-257}],authenticatorSelection:{authenticatorAttachment:"platform",userVerification:"required"},timeout:60000}});
+    if(!cred)throw new Error("Pendaftaran sidik jari dibatalkan.");
+    localStorage.setItem("sbw_bio",b64url(cred.rawId));
+    bioStat();
+  }catch(e){if(el)el.textContent="Gagal mengaktifkan: "+e.message}
+};
+document.getElementById("bioOff").onclick=()=>{localStorage.removeItem("sbw_bio");bioStat()};
+document.getElementById("bioBtn").onclick=async()=>{
+  const err=document.getElementById("err");
+  try{
+    const cid=localStorage.getItem("sbw_bio");if(!cid)throw new Error("Sidik jari belum diaktifkan.");
+    await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),allowCredentials:[{type:"public-key",id:ub64(cid)}],userVerification:"required",timeout:60000}});
+    const s=localStorage.getItem("sbw_key");
+    if(!s)throw new Error("Kunci perangkat tidak ditemukan — masuk pakai password sekali, lalu aktifkan lagi sidik jari di Setelan.");
+    show(await unlockWithKey(Uint8Array.from(atob(s),c=>c.charCodeAt(0))));
+  }catch(e){if(err)err.textContent="Sidik jari gagal: "+e.message}
 };
 
 /* ===== Graph view: force-directed brain network ===== */
@@ -515,5 +562,5 @@ document.getElementById("gz").onclick=()=>view.k=Math.min(9,view.k*1.25);
 document.getElementById("gzo").onclick=()=>view.k=Math.max(0.12,view.k*0.8);
 document.getElementById("gr").onclick=()=>{G=null;initGraph()};
 
-(async()=>{const s=localStorage.getItem("sbw_key");if(s){try{const raw=Uint8Array.from(atob(s),c=>c.charCodeAt(0));show(await unlockWithKey(raw));}catch(e){localStorage.removeItem("sbw_key")}}})();
+(async()=>{const s=localStorage.getItem("sbw_key");if(s&&localStorage.getItem("sbw_bio")){document.getElementById("bioBtn").style.display="block"}else if(s){try{const raw=Uint8Array.from(atob(s),c=>c.charCodeAt(0));show(await unlockWithKey(raw));}catch(e){localStorage.removeItem("sbw_key")}}})();
 </script></body></html>
