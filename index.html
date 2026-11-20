@@ -62,7 +62,7 @@ header{flex-wrap:wrap}header b{font-size:15px}header input{order:5;flex:1 1 100%
 </style></head><body>
 <div id="lock"><div class="box">
 <div class="ring">🧠</div>
-<h1>Second Brain</h1><p>Vault privat Kontenlaris Studio — 25 catatan terenkripsi AES-256. Masukkan password untuk membuka.</p>
+<h1>Second Brain</h1><p>Masukkan password untuk membuka.</p>
 <input type="password" id="pw" placeholder="Password" autocomplete="current-password">
 <button id="go">Buka Vault</button>
 <button id="bioBtn" style="display:none">🔓 Masuk dengan Sidik Jari</button>
@@ -188,14 +188,12 @@ function renderNav(f){
     try{sect("🕒 Terakhir Dibuka",JSON.parse(localStorage.getItem("sbw_recent")||"[]").map(p=>NOTES.find(n=>n.path===p)).filter(Boolean))}catch(e){}}
   for(const n of NOTES){
     if(n.hub)continue;
-    if(f && !(n.title+" "+n.path+" "+noteTags(n).join(" ")).toLowerCase().includes(f.replace(/^#/,"")))continue;
+    if(f && !(n.title+" "+n.path).toLowerCase().includes(f))continue;
     const g=n.path.includes("/")?n.path.split("/")[0]:"Catatan";
     if(g!==grp){grp=g;const d=document.createElement("div");d.className="grp";d.textContent=g;nav.appendChild(d);}
     const a=document.createElement("a");a.href="#";a.textContent=n.title;a.dataset.path=n.path;
     a.onclick=e=>{e.preventDefault();openNote(n.path);nav.classList.remove("open")};nav.appendChild(a);
   }
-  if(!f){const counts={};for(const n of NOTES){if(n.hub)continue;for(const t of noteTags(n))counts[t]=(counts[t]||0)+1}
-    const ts=Object.keys(counts).sort();if(ts.length){const d=document.createElement("div");d.className="grp";d.textContent="🏷️ Tag";nav.appendChild(d);for(const t of ts){const a=document.createElement("a");a.href="#";a.textContent="#"+t+" ("+counts[t]+")";a.onclick=e=>{e.preventDefault();const q=document.getElementById("q");q.value="#"+t;q.dispatchEvent(new Event("input"))};nav.appendChild(a)}}}
 }
 function openNote(path){
   const n=NOTES.find(x=>x.path===path);if(!n)return;
@@ -204,17 +202,15 @@ function openNote(path){
   const v=document.getElementById("view");v.innerHTML=n.html;v.scrollTop=0;
   document.querySelectorAll("nav a").forEach(a=>a.classList.toggle("act",a.dataset.path===path));
   v.querySelectorAll("a[data-note]").forEach(a=>a.onclick=e=>{e.preventDefault();openNote(a.dataset.note)});
-  const tags=noteTags(n),bl=backlinks(path);
+  const bl=backlinks(path);
   const favs0=getFav(),wc=(v.textContent||"").trim().split(/\s+/).filter(Boolean).length;
   const hs=[...v.querySelectorAll("h1,h2,h3")];
   if(hs.length>2){const od=document.createElement("details");od.className="outline";let oh="<summary>🧭 Daftar Isi ("+hs.length+")</summary>";hs.forEach((h,i)=>{h.id="hh"+i;oh+='<a href="#" data-hh="'+i+'" style="padding-left:'+((+h.tagName[1]-1)*14)+'px">'+h.textContent+"</a>"});od.innerHTML=oh;v.insertBefore(od,v.firstChild);od.querySelectorAll("a[data-hh]").forEach(a=>a.onclick=e=>{e.preventDefault();hs[+a.dataset.hh].scrollIntoView({behavior:"smooth",block:"start"})})}
   if(true){
     const meta=document.createElement("div");meta.className="notemeta";let h='<div class="tagrow"><button class="tag" id="mFav">'+(favs0.includes(path)?"⭐ Favorit":"☆ Jadikan Favorit")+'</button><button class="tag" id="mLocal">🕸️ Graf Lokal</button></div><div class="statrow">📄 '+wc+' kata · ±'+Math.max(1,Math.round(wc/180))+' menit baca</div>';
-    if(tags.length)h+='<div class="tagrow">'+tags.map(t=>'<button class="tag" data-tag="'+t+'">#'+t+'</button>').join("")+'</div>';
     if(bl.length)h+='<div class="blrow">🔗 <b>Ditautkan dari:</b> '+bl.map(p=>{const o=NOTES.find(x=>x.path===p);return '<a href="#" data-note="'+p+'">'+(o?o.title:p)+'</a>'}).join(" · ")+'</div>';
     meta.innerHTML=h;v.appendChild(meta);
     meta.querySelectorAll("a[data-note]").forEach(a=>a.onclick=e=>{e.preventDefault();openNote(a.dataset.note)});
-    meta.querySelectorAll(".tag").forEach(b=>b.onclick=()=>{const q=document.getElementById("q");q.value="#"+b.dataset.tag;q.dispatchEvent(new Event("input"));document.getElementById("nav").classList.add("open")});
   }
   const mf=document.getElementById("mFav");if(mf)mf.onclick=()=>{toggleFav(path);openNote(path)};
   const ml=document.getElementById("mLocal");if(ml)ml.onclick=()=>openLocalGraph(path);
@@ -436,8 +432,7 @@ document.getElementById("aiAsk").onclick=()=>{const q=document.getElementById("a
 document.getElementById("aiSum").onclick=()=>aiCall("Ringkas catatan berikut menjadi poin-poin penting:\n"+curNoteText());
 
 
-/* ===== v1.4: tags, backlinks, editor rename/delete ===== */
-function noteTags(n){const d=document.createElement("div");d.innerHTML=n.html;const m=(d.textContent||"").match(/(?:^|\s)#([\p{L}\p{N}_][\p{L}\p{N}_-]*)/gu)||[];return [...new Set(m.map(x=>x.trim().slice(1).toLowerCase()))]}
+/* ===== v1.4: backlinks, editor rename/delete ===== */
 function outLinks(n){const m=n.html.match(/data-note="[^"]+"/g)||[];return [...new Set(m.map(x=>x.slice(11,-1)))]}
 function backlinks(p){return NOTES.filter(n=>n.path!==p&&!n.hub&&outLinks(n).includes(p)).map(n=>n.path)}
 document.getElementById("edRename").onclick=async()=>{
