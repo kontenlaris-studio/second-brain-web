@@ -815,10 +815,29 @@ function tick(){
     for(const[a,b]of E){let dx=N[b].x-N[a].x,dy=N[b].y-N[a].y,d=Math.sqrt(dx*dx+dy*dy)+0.01,f=(d-120)*0.028;dx/=d;dy/=d;N[a].vx+=dx*f;N[a].vy+=dy*f;N[b].vx-=dx*f;N[b].vy-=dy*f}
     for(const n of N){n.vx+=-n.x*0.0011;n.vy+=-n.y*0.0011;if(drag&&drag.n===n)continue;n.vx*=0.86;n.vy*=0.86;n.x+=n.vx;n.y+=n.vy}
   }
-  /* starfield */
-  ctx.clearRect(0,0,cv.width,cv.height);
-  if(!tick.stars){tick.stars=[];let seed=42;const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};for(let i=0;i<130;i++)tick.stars.push({x:rnd(),y:rnd(),r:rnd()*1.5+0.4,p:rnd()*6.28})}
-  for(const st of tick.stars){const a=0.25+0.35*(0.5+0.5*Math.sin(t*0.9+st.p));ctx.beginPath();ctx.arc(st.x*cv.width,st.y*cv.height,st.r*devicePixelRatio,0,7);ctx.fillStyle=`rgba(190,210,255,${a})`;ctx.fill()}
+  /* galaxy background: pre-rendered nebula + milky way + sun glow, live twinkles on top */
+  const W=cv.width,H=cv.height;
+  if(!tick.bg||tick.bw!==W||tick.bh!==H){
+    tick.bw=W;tick.bh=H;const bg=document.createElement("canvas");bg.width=W;bg.height=H;const b=bg.getContext("2d");
+    let seed=1337;const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};
+    const base=b.createLinearGradient(0,0,0,H);base.addColorStop(0,"#040918");base.addColorStop(.45,"#071631");base.addColorStop(1,"#02040d");b.fillStyle=base;b.fillRect(0,0,W,H);
+    const cloud=(x,y,r,c,a)=>{const g=b.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,c.replace("A",a));g.addColorStop(1,c.replace("A","0"));b.fillStyle=g;b.fillRect(x-r,y-r,r*2,r*2)};
+    cloud(W*0.22,H*0.28,Math.max(W,H)*0.55,"rgba(88,60,180,A)","0.13");cloud(W*0.78,H*0.62,Math.max(W,H)*0.5,"rgba(24,100,160,A)","0.11");cloud(W*0.55,H*0.15,Math.max(W,H)*0.42,"rgba(150,50,120,A)","0.08");cloud(W*0.35,H*0.8,Math.max(W,H)*0.48,"rgba(40,60,170,A)","0.10");cloud(W*0.9,H*0.3,Math.max(W,H)*0.3,"rgba(20,140,150,A)","0.07");
+    b.save();b.translate(W/2,H/2);b.rotate(-0.42);const mw=Math.max(W,H);
+    const band=b.createLinearGradient(0,-mw*0.16,0,mw*0.16);band.addColorStop(0,"rgba(160,180,255,0)");band.addColorStop(.5,"rgba(170,190,255,0.07)");band.addColorStop(1,"rgba(160,180,255,0)");b.fillStyle=band;b.fillRect(-mw,-mw*0.16,mw*2,mw*0.32);
+    for(let i=0;i<900;i++){const x=(rnd()*2-1)*mw,y=((rnd()+rnd()+rnd())/3*2-1)*mw*0.13,r=rnd()*1.1+0.3,a=0.15+rnd()*0.5;b.beginPath();b.arc(x,y,r*devicePixelRatio,0,7);b.fillStyle=`rgba(200,215,255,${a})`;b.fill()}
+    b.restore();
+    for(let i=0;i<280;i++){const x=rnd()*W,y=rnd()*H,r=rnd()*1.3+0.3,a=0.2+rnd()*0.6,warm=rnd()<0.16;b.beginPath();b.arc(x,y,r*devicePixelRatio,0,7);b.fillStyle=warm?`rgba(255,220,180,${a})`:`rgba(200,218,255,${a})`;b.fill()}
+    for(let i=0;i<14;i++){const x=rnd()*W,y=rnd()*H,r=(rnd()*1.6+1.4)*devicePixelRatio;b.save();b.translate(x,y);const g=b.createRadialGradient(0,0,0,0,0,r*4);g.addColorStop(0,"rgba(255,255,255,0.85)");g.addColorStop(1,"rgba(255,255,255,0)");b.fillStyle=g;b.fillRect(-r*4,-r*4,r*8,r*8);b.strokeStyle="rgba(230,240,255,0.5)";b.lineWidth=devicePixelRatio;b.beginPath();b.moveTo(-r*3.4,0);b.lineTo(r*3.4,0);b.moveTo(0,-r*3.4);b.lineTo(0,r*3.4);b.stroke();b.restore()}
+    const sx=W*0.87,sy=H*0.09,sr=Math.max(W,H);
+    const sun=b.createRadialGradient(sx,sy,0,sx,sy,sr*0.55);sun.addColorStop(0,"rgba(255,236,190,0.50)");sun.addColorStop(0.12,"rgba(255,196,110,0.22)");sun.addColorStop(0.4,"rgba(255,150,60,0.07)");sun.addColorStop(1,"rgba(255,150,60,0)");b.fillStyle=sun;b.fillRect(0,0,W,H);
+    const core=b.createRadialGradient(sx,sy,0,sx,sy,sr*0.07);core.addColorStop(0,"rgba(255,252,238,0.95)");core.addColorStop(0.55,"rgba(255,226,160,0.55)");core.addColorStop(1,"rgba(255,210,130,0)");b.fillStyle=core;b.beginPath();b.arc(sx,sy,sr*0.07,0,7);b.fill();
+    b.save();b.translate(sx,sy);b.scale(1,0.16);const streak=b.createRadialGradient(0,0,0,0,0,sr*0.34);streak.addColorStop(0,"rgba(255,220,160,0.20)");streak.addColorStop(1,"rgba(255,220,160,0)");b.fillStyle=streak;b.beginPath();b.arc(0,0,sr*0.34,0,7);b.fill();b.restore();
+    tick.bg=bg;
+  }
+  ctx.clearRect(0,0,W,H);ctx.drawImage(tick.bg,0,0);
+  if(!tick.stars){tick.stars=[];let seed=42;const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296};for(let i=0;i<110;i++)tick.stars.push({x:rnd(),y:rnd(),r:rnd()*1.5+0.4,p:rnd()*6.28,w:rnd()<0.16})}
+  for(const st of tick.stars){const a=0.22+0.33*(0.5+0.5*Math.sin(t*0.9+st.p));ctx.beginPath();ctx.arc(st.x*W,st.y*H,st.r*devicePixelRatio,0,7);ctx.fillStyle=st.w?`rgba(255,220,180,${a})`:`rgba(190,210,255,${a})`;ctx.fill()}
   ctx.save();ctx.translate(view.x,view.y);ctx.scale(view.k,view.k);
   const nb=hover==null?null:new Set([hover,...E.flatMap(e=>e[0]===hover?[e[1]]:e[1]===hover?[e[0]]:[])]);
   /* curved threads with travelling light pulses */
