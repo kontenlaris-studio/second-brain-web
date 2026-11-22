@@ -756,6 +756,12 @@ async function recSave(kind){
     name="second-brain-vault-"+ds+".zip";
   }
   st.textContent="⏳ Menyiapkan file…";
+  const inWebView=/; wv\)/.test(navigator.userAgent)||!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
+  if(!inWebView){
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    st.textContent="✓ Unduhan langsung dimulai: "+name+" — tersimpan di folder Unduhan/Download HP kamu.";
+    return;
+  }
   if(edTok()){
     st.textContent="⏳ Menyimpan ke repo…";
     try{
@@ -765,8 +771,7 @@ async function recSave(kind){
       st.innerHTML='✓ Tersimpan di repo: <a href="https://github.com/'+GH_REPO+'/blob/main/Pemulihan/'+name+'" target="_blank" style="color:var(--accent)">Pemulihan/'+name+'</a> — ketuk untuk membuka & mengunduh dari GitHub.';
     }catch(e){st.textContent="Gagal menyimpan ke repo: "+e.message}
   }else{
-    const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000);
-    st.textContent="✓ Unduhan dimulai (mode browser).";
+    st.textContent="Unduhan langsung tidak didukung di tampilan ini — hubungkan token GitHub di Editor agar paket tersimpan ke repo.";
   }
 }
 document.getElementById("recBtn").onclick=()=>recSave("md");
